@@ -2,11 +2,11 @@
 
 > 仅保存恢复开发所需的最小状态。架构见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，决策见 [`DECISIONS.md`](DECISIONS.md)，阶段计划见 [`CURRENT_PLAN.md`](CURRENT_PLAN.md)。
 
-- **Last Updated**：2026-11-23 23:59 GMT+8
+- **Last Updated**：2026-11-24 00:13 GMT+8
 - **Current Branch**：`dev`
 - **Remote**：`navix` → `https://github.com/miozen/Navix.git`；`dev` 已推送，`main` 未推送（旧版本含漏洞）
-- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；最近实现提交 `2a67f55 feat(p2): split frontend into CSS and ES modules`
-- **Local vs Remote**：`dev` 与 `navix/dev` 同步；本地 `main` 仍跟踪原 `origin/main`，旧 `main` 不用于接力
+- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；已验证同步提交 `70cd938 docs: stabilize AI handoff and remote sync protocol`，最近实现提交 `2a67f55`
+- **Local vs Remote**：`git ls-remote navix refs/heads/dev` 与推送时本地 HEAD 一致（`70cd938`）；本地 `main` 仍跟踪原 `origin/main`，旧 `main` 不用于接力
 - **Working Tree**：`CLEAN`（`.workbuddy-ai/` 已由 `.gitignore` 排除）
 - **Current Phase**：接力稳定完成；P0 ～ P2 已完成，P3 待用户确认
 - **Current Task**：无；等待用户确认是否进入 P3
