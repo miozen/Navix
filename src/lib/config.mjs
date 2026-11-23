@@ -34,9 +34,7 @@ export async function saveSiteConfig(env, input) {
   for (const key of PUBLIC_KEYS) {
     if (key in input) clean[key] = input[key];
   }
-  clean.version = typeof input.version === 'number' && Number.isFinite(input.version)
-    ? input.version
-    : current.version + 1;
+  clean.version = current.version + 1;
   clean.updatedAt = new Date().toISOString();
   await kvPut(env, 'site_config', JSON.stringify(clean));
   return clean;

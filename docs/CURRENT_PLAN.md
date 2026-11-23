@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-**Phase 1 — P0 安全修复与 Workers 迁移准备（Planned，未开始，2026-11-23）**
+**Phase 2 — P1 数据与状态管理（Completed，待阶段验收，2026-11-23）**
 
 ## Goal
 
@@ -22,10 +22,13 @@
 - 已移除公开配置中的管理员凭据、旧 Token 与 `adminPwd` 前端依赖；凭据改为私有哈希存储。
 - 已加入字段白名单、CSRF 同源校验、XSS 安全渲染基线，并关闭 `/api/links`。
 - 已建立最小回归清单与 14 项安全/API 测试，全部通过。
+- P1 已在 `dev` 分支完成：配置写入增加版本冲突提示（409 + 当前版本），明确不保证原子性（D-011）。
+- 前端增加保存状态机（idle/saving/saved/failed/unknown）、8 秒超时、结果未知提示、重复提交防护与已保存状态展示。
+- 新增版本冲突测试，测试总数达到 15/15 通过。
 
 ## In Progress
 
-无。P0 已在 `dev` 分支完成实现与本地验证，等待阶段验收；不推送、不切生产域名、不进入 P1。
+无。P1 已在 `dev` 分支完成实现与本地验证，等待阶段验收；不推送、不切生产域名、不进入 P2。
 
 ## Remaining
 
@@ -41,7 +44,7 @@
   9. 修复动态文本 `innerHTML` 注入风险。
   10. 清理 `/api/links`（返回 410/404 并最终删除文件）。
   11. preview 完成静态资源、API、登录、配置保存、页面功能与安全测试全量验证。
-- **P1 — 数据与状态管理（Planned）**
+- **P1 — 数据与状态管理（Completed，待阶段验收）**
   1. 明确 KV 只存公开站点配置，个人偏好留在浏览器本地。
   2. 增加 `version` / `updatedAt` 与尽力而为冲突提示，不承诺原子乐观锁（D-011）。
   3. 统一保存状态机：`idle / saving / saved / failed / unknown`，超时保留草稿。
@@ -80,15 +83,16 @@
 - 已执行 `git diff --check`。
 - 上一轮 Node 语法检查通过：`functions/api/config.js`、`functions/api/links.js`、`index.html` 内联脚本。
 - P0 验证：`node --check` 覆盖全部 `.mjs` 模块与测试；`node --test` 14/14 通过；`public/index.html` 内联脚本语法通过；公开目录仅含 `index.html`、`ads.txt`、`assets/`；敏感字符串扫描通过。
+- P1 验证：`node --test` 15/15 通过，新增过期版本返回 409 的测试；`public/index.html` 内联脚本语法通过；保存状态机已加入回归清单。
 - 未执行：真实 Cloudflare preview 部署与 KV 端到端验证；浏览器交互回归需在有环境的机器上执行；GitHub Actions 尚未建立（P3）。
 
 ## Blockers
 
-- 无技术阻塞；P0 已完成，等待阶段验收。
-- 真实 Cloudflare preview 部署与 KV 端到端验证尚未执行；需要配置 KV ID 与 `SESSION_SECRET` 后完成。
+- 无技术阻塞；P1 已完成，等待阶段验收。
+- 真实 Cloudflare preview 部署与 KV 端到端验证尚未执行；需要配置 KV ID 与 `SESSION_SECRET` 后完成。本地环境无 Wrangler，未安装新依赖。
 - 新远端 `Navix.git` 在迁移完成并验证后再配置，当前不推送（D-014）。
 - `.workbuddy-ai/` 为本地工具记忆，不应提交或删除。
 
 ## Next Action
 
-提交 P0 阶段报告（变更清单、测试结果、遗留风险）；等待用户确认后再进入 P1。在此之前不推送、不配置生产域名、不进入 P1。
+提交 P1 阶段报告（变更清单、测试结果、遗留风险）；等待用户确认后再进入 P2。在此之前不推送、不配置生产域名、不进入 P2。

@@ -123,3 +123,27 @@ test('修改密码后旧会话失效，新密码可登录', async () => {
   }), env);
   assert.equal(relogin.status, 200);
 });
+
+test('过期版本触发尽力而为冲突提示', async () => {
+  const { env, store } = setupEnv();
+  await seedAdmin(env);
+  await env.NAV_DB.put('site_config', JSON.stringify({ wallpaper: '', friendLinks: [], version: 7 }));
+
+  const login = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: PASSWORD })
+  }), env);
+  const cookie = login.headers.get('Set-Cookie').split(';')[0];
+
+  const conflict = await worker.fetch(request('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify({ version: 3, wallpaper: 'https://example.com/old.jpg' })
+  }), env);
+  const body = await conflict.json();
+  assert.equal(conflict.status, 409);
+  assert.equal(body.conflict, true);
+  assert.equal(body.currentVersion, 7);
+  assert.equal(JSON.parse(store.get('site_config')).version, 7);
+});

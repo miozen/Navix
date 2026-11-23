@@ -29,7 +29,21 @@ export async function handleConfig(request, env) {
     if (sanitized.error) return json({ success: false, message: sanitized.error }, 400);
 
     try {
-      const { config: current } = await getSiteConfig(env);
+      const { config: current, version: currentVersion } = await getSiteConfig(env);
+      const baseVersion = sanitized.value.version;
+      delete sanitized.value.version;
+      delete sanitized.value.updatedAt;
+
+      if (typeof baseVersion === 'number' && baseVersion !== currentVersion) {
+        return json({
+          success: false,
+          conflict: true,
+          message: '配置可能已被其他设备更新，请刷新确认后再保存。',
+          currentVersion,
+          config: current
+        }, 409, { 'Cache-Control': 'no-store' });
+      }
+
       const merged = { ...current, ...sanitized.value };
       delete merged.version;
       delete merged.updatedAt;

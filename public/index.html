@@ -359,7 +359,7 @@
         </div>
 
         <footer id="admin-trigger" ondblclick="triggerAdminLogin()" class="text-slate-500 text-xs mt-4 cursor-pointer select-none tracking-wide hover:text-indigo-400/70 transition-colors" title="后台入口 (双击 / Double Click)">
-            <span data-i18n="footerText">&copy; 2026 Mio-智能生态导航 · Powered by Cloudflare</span> <span id="admin-badge" class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold hidden" data-i18n="adminBadge">已登入</span>
+            <span data-i18n="footerText">&copy; 2026 Mio-智能生态导航 · Powered by Cloudflare</span> <span id="cloud-save-status" class="ml-1 text-[10px] hidden"></span> <span id="admin-badge" class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold hidden" data-i18n="adminBadge">已登入</span>
         </footer>
     </div>
 
@@ -438,7 +438,10 @@
         let currentEngineKey = 'google';
 
         // 【关键更新】状态池加入 friendLinks 字段
-        let cloudConfig = { wallpaper: "", dynamicSections: [], friendLinks: [] };
+        let cloudConfig = { wallpaper: "", dynamicSections: [], friendLinks: [], version: 0 };
+        let saveState = 'idle';
+        let saveInProgress = false;
+        let saveStatusTimer = null;
 
         let dragType = null;
         let dragSecId = null;
@@ -664,6 +667,7 @@
                 if (res.ok) {
                     const configData = await res.json();
                     if (configData) {
+                        if (typeof configData.version === 'number') cloudConfig.version = configData.version;
                         if (configData.wallpaper !== undefined) {
                             if (configData.wallpaper === "") {
                                 savedBg = null;
@@ -710,33 +714,79 @@
             loadFriendLinks();
         }
 
+        // 保存状态机：idle / saving / saved / failed / unknown
+        function setSaveState(state, message) {
+            saveState = state;
+            const el = document.getElementById('cloud-save-status');
+            if (!el) return;
+            clearTimeout(saveStatusTimer);
+            el.classList.remove('hidden', 'text-slate-400', 'text-emerald-400', 'text-rose-400', 'text-amber-400');
+            const colors = {
+                saving: 'text-slate-400',
+                saved: 'text-emerald-400',
+                failed: 'text-rose-400',
+                unknown: 'text-amber-400'
+            };
+            el.classList.add(colors[state] || 'text-slate-400');
+            el.textContent = message || state;
+            if (state === 'saved') {
+                saveStatusTimer = setTimeout(() => el.classList.add('hidden'), 2500);
+            }
+        }
+
         // 通过 HttpOnly Cookie 会话保存配置，不再传递或存储明文 Token
         async function updateCloudConfig(key, value) {
+            if (saveInProgress) {
+                setSaveState('failed', currentLang === 'zh' ? '已有保存进行中，请稍候' : 'Save already in progress');
+                return false;
+            }
+            saveInProgress = true;
             cloudConfig[key] = value;
+            setSaveState('saving', currentLang === 'zh' ? '正在保存…' : 'Saving…');
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
 
             try {
                 const res = await fetch('/api/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify(cloudConfig)
+                    signal: controller.signal,
+                    body: JSON.stringify({ ...cloudConfig, version: cloudConfig.version || 0 })
                 });
+
+                const data = await res.json().catch(() => ({}));
 
                 if (!res.ok) {
                     if (res.status === 401) {
-                        alert("保存失败：会话已失效，请重新登录管理模式！");
+                        setSaveState('failed', currentLang === 'zh' ? '会话已失效，请重新登录' : 'Session expired');
                         await logoutAdmin();
+                    } else if (res.status === 409) {
+                        setSaveState('failed', data.message || '配置可能已被其他设备更新，请刷新确认');
+                        alert(data.message || '配置可能已被其他设备更新，请刷新确认');
                     } else {
-                        const data = await res.json().catch(() => ({}));
+                        setSaveState('failed', data.message || `保存失败 (${res.status})`);
                         alert(data.message || `保存失败：服务端异常 (${res.status})`);
                     }
                     return false;
                 }
+
+                if (typeof data.version === 'number') cloudConfig.version = data.version;
+                setSaveState('saved', currentLang === 'zh' ? '已保存' : 'Saved');
                 return true;
             } catch (e) {
-                console.error("云端同步失败", e);
-                alert("网络异常，无法连接云端！");
+                console.error('云端同步失败', e);
+                const isTimeout = e.name === 'AbortError';
+                const msg = isTimeout
+                    ? (currentLang === 'zh' ? '保存结果未知，请刷新确认' : 'Save result unknown, please refresh')
+                    : (currentLang === 'zh' ? '网络异常，结果未知，请刷新确认' : 'Network error, result unknown');
+                setSaveState('unknown', msg);
+                alert(msg);
                 return false;
+            } finally {
+                clearTimeout(timeoutId);
+                saveInProgress = false;
             }
         }
 
