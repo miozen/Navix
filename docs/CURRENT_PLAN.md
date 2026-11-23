@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-**Phase 3 — P2 前端模块化（Completed，待阶段验收，2026-11-23）**
+**Phase 4 — 接力稳定与远端同步（Completed，2026-11-23）**
 
 ## Goal
 
@@ -28,10 +28,12 @@
 - P2 已在 `dev` 分支完成：`index.html` 的内联 CSS 与 JS 已拆分到 `public/assets/css/app.css` 与原生 ES Modules。
 - 建立 `core/state`、`core/api`、`core/i18n`、`features/starfield`、`appearance`、`widgets`、`navigation`、`admin` 等模块入口，`main.js` 负责启动与内联事件兼容。
 - 保留全部页面结构、视觉效果与交互处理器；回归清单增加模块化加载项。
+- 接力稳定：新增 `.gitignore`，更新 `ARCHITECTURE.md` 与 `AGENTS.md` 的远端/分支规则，明确 Git 为接力依据。
+- `dev` 分支已推送到远端 `navix`（`https://github.com/miozen/Navix.git`），可作为跨电脑开发接力点。
 
 ## In Progress
 
-无。P2 已在 `dev` 分支完成实现与本地验证，等待阶段验收；不推送、不切生产域名、不进入 P3。
+无。P0 ～ P2 与接力稳定已完成，`dev` 已推送到 `navix`；当前等待用户确认是否进入 P3。生产域名未切换，旧 `main` 未推送。
 
 ## Remaining
 
@@ -92,11 +94,11 @@
 
 ## Blockers
 
-- 无技术阻塞；P2 已完成，等待阶段验收。
+- 无技术阻塞；P0 ～ P2 与接力稳定已完成，等待用户确认是否进入 P3。
 - 真实 Cloudflare preview 部署与 KV 端到端验证尚未执行；需要配置 KV ID 与 `SESSION_SECRET` 后完成。本地环境无 Wrangler，未安装新依赖。
-- 新远端 `Navix.git` 在迁移完成并验证后再配置，当前不推送（D-014）。
-- `.workbuddy-ai/` 为本地工具记忆，不应提交或删除。
+- 旧 `main` 仍含公开密码漏洞，未推送到 `navix`；生产切换前必须建立安全 `main`（D-013）。
+- `.workbuddy-ai/` 已在 `.gitignore` 中排除，不应提交或删除。
 
 ## Next Action
 
-提交 P2 阶段报告（变更清单、测试结果、遗留风险）；等待用户确认后再进入 P3。在此之前不推送、不配置生产域名、不进入 P3。
+等待用户确认后进入 P3：补齐单元/API/冒烟测试、GitHub Actions、dev/preview/production 环境边界与文档同步。生产切换前仍需完成真实 preview 端到端验证。

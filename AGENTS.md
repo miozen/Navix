@@ -53,6 +53,9 @@ Git 是代码同步的可靠依据；Handoff 不能替代 Git。
 - 不擅自丢弃、覆盖或清理未提交修改。
 - 不自动执行 `reset --hard`、`clean`、force push、非显式 rebase 等危险操作。
 - 每次 Handoff 必须明确：本地 HEAD、与远端的同步关系、未提交修改、未推送提交。
+- 当前项目远端为 `navix`（`https://github.com/miozen/Navix.git`）；`dev` 是开发分支，`main` 是稳定分支。
+- 只有已修复漏洞并通过验证的 `main` 才允许部署到 Workers；旧 `main` 不得推送或作为回退目标（D-013、D-014）。
+- 推送前先确认 `git status` 干净、`git diff --check` 通过、测试通过；推送后以远端 HEAD 作为跨电脑接力点。
 
 ## 5. Session Handoff Protocol
 

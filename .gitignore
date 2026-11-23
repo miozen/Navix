@@ -1,0 +1,4 @@
+.workbuddy-ai/
+.dev.vars
+node_modules/
+.DS_Store

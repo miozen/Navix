@@ -2,32 +2,43 @@
 
 > 仅保存恢复开发所需的最小状态。架构见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，决策见 [`DECISIONS.md`](DECISIONS.md)，阶段计划见 [`CURRENT_PLAN.md`](CURRENT_PLAN.md)。
 
-- **Last Updated**：2026-11-23 23:55 GMT+8
-- **Current Branch**：`dev`（本地新建；尚未推送）
-- **HEAD / Last Commit**：`2a67f55 feat(p2): split frontend into CSS and ES modules`
-- **Local vs Remote**：`dev` 有 5 个未推送提交；`main` 仍与 `origin/main` 一致（ahead/behind = `0 / 0`）
-- **Working Tree**：`CLEAN`（仅 `.workbuddy-ai/` 本地工具记忆未跟踪）
-- **Current Phase**：P2 — 前端模块化（Completed，待阶段验收）
+- **Last Updated**：2026-11-23 23:59 GMT+8
+- **Current Branch**：`dev`
+- **Remote**：`navix` → `https://github.com/miozen/Navix.git`；`dev` 已推送，`main` 未推送（旧版本含漏洞）
+- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；最近实现提交 `2a67f55 feat(p2): split frontend into CSS and ES modules`
+- **Local vs Remote**：`dev` 与 `navix/dev` 同步；本地 `main` 仍跟踪原 `origin/main`，旧 `main` 不用于接力
+- **Working Tree**：`CLEAN`（`.workbuddy-ai/` 已由 `.gitignore` 排除）
+- **Current Phase**：接力稳定完成；P0 ～ P2 已完成，P3 待用户确认
 - **Current Task**：无；等待用户确认是否进入 P3
-- **Last Completed**：P0/P1/P2 均已在本地 `dev` 提交；P2 完成 HTML/CSS/JS 物理拆分、core/features 模块入口与 main.js 启动器，保留全部内联事件处理器；15/15 测试通过
-- **Uncommitted Work**：
-  - `.workbuddy-ai/`（本轮前已存在的未跟踪本地工具记忆；非业务代码，不应提交或删除）
+- **Last Completed**：Workers + Static Assets + KV 骨架、安全 API、版本冲突提示与保存状态机、前端模块化、稳定接力文档与远端同步
 - **Validation Performed**：
-  - HTML 无内联 `<style>` / `<script>`；CSS 与模块脚本引用存在
-  - 模块导入路径全部有效；55 个导出均有声明；16 个内联处理器均已挂载到 window
-  - 全部模块语法检查通过；`node --test tests/*.test.mjs` 15/15 通过
+  - `node --test tests/*.test.mjs`：15/15 通过
+  - 全部模块与 Worker 源码语法检查通过
+  - HTML/CSS/JS 分离与模块导入路径检查通过
+  - `git diff --check` 通过
 - **Validation Pending**：
-  - 真实 Cloudflare preview 部署、KV 绑定端到端验证
+  - 真实 Cloudflare preview 部署与 KV 端到端验证
   - 浏览器交互回归清单执行
+  - GitHub Actions 与 P3 工程化
   - 生产切换与回退演练
-  - GitHub Actions（P3）
 - **Known Issues / Blockers**：
-  - 本地无 Wrangler，未安装新依赖；真实 preview 验证需在有 Wrangler 的环境执行。
-  - `wrangler.jsonc` 中 KV ID 为占位符，preview 部署前需替换。
-  - `SESSION_SECRET` 需通过 Wrangler secret 配置，未写入仓库。
-  - 新密码必须通过 `scripts/generate-admin-auth.mjs` 重新生成哈希并写入私有 KV 键 `admin_auth`；旧密码不得复用。
-  - 会话失效受 KV 最终一致性影响，存在短暂延迟（D-012）。
-  - 版本检测仅为尽力而为提示，不保证原子性，也不要求检测全部并发冲突（D-011）。
-  - `dev` 尚未推送，不能作为跨电脑已同步接力点。
-- **Exact Next Action**：提交 P2 阶段报告（变更清单、测试结果、遗留风险）；等待用户确认后再进入 P3。在此之前不推送、不配置生产域名。
-- **Cross-machine Ready**：`NO`
+  - `SESSION_SECRET` 需通过 Wrangler secret 配置；`wrangler.jsonc` 中 KV ID 为占位符。
+  - 新密码必须用 `scripts/generate-admin-auth.mjs` 重新生成哈希并写入 `admin_auth`，旧密码不得复用。
+  - 版本检测仅为尽力而为提示；会话失效受 KV 最终一致性影响。
+  - 旧 `main` 含公开密码漏洞，禁止推送或作为回退目标。
+- **Exact Next Action**：用户确认后进入 P3；生产切换前先完成真实 preview 端到端验证。
+- **Cross-machine Ready**：`YES`（以 `navix/dev` 为接力点）
+
+## 稳定恢复清单
+
+新电脑或新会话按以下顺序恢复：
+
+```bash
+git fetch navix
+git checkout dev
+git pull --ff-only navix dev
+git status --short --branch
+git rev-parse HEAD
+```
+
+然后依次读取：`AGENTS.md` → `docs/ARCHITECTURE.md` → `docs/DECISIONS.md` → `docs/CURRENT_PLAN.md` → `docs/HANDOFF.md`，并以源码与 `git` 状态复核。不要依赖历史聊天记录恢复项目状态。
