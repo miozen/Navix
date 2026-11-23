@@ -2,19 +2,15 @@
 
 > 仅保存恢复开发所需的最小状态。架构见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，决策见 [`DECISIONS.md`](DECISIONS.md)，阶段计划见 [`CURRENT_PLAN.md`](CURRENT_PLAN.md)。
 
-- **Last Updated**：2026-11-23 23:26 GMT+8
+- **Last Updated**：2026-11-23 23:30 GMT+8
 - **Current Branch**：`dev`（本地新建；尚未推送）
-- **HEAD / Last Commit**：`1120c21`（P0 后的 Handoff 文档同步提交）
-- **Local vs Remote**：`dev` 有 P0 的 2 个未推送提交；`main` 仍与 `origin/main` 一致（ahead/behind = `0 / 0`）
-- **Working Tree**：`DIRTY`
+- **HEAD / Last Commit**：`82ee2ea feat(p1): add advisory version checks and save state machine`
+- **Local vs Remote**：`dev` 有 3 个未推送提交（`ff1a301`、`1120c21`、`82ee2ea`）；`main` 仍与 `origin/main` 一致（ahead/behind = `0 / 0`）
+- **Working Tree**：`CLEAN`（仅 `.workbuddy-ai/` 本地工具记忆未跟踪）
 - **Current Phase**：P1 — 数据与状态管理（Completed，待阶段验收）
 - **Current Task**：无；等待用户确认是否进入 P2
-- **Last Completed**：P1 实现：配置写入增加版本冲突提示（409 + 当前版本）；前端增加保存状态机、8 秒超时、结果未知提示、重复提交防护与已保存状态展示；15/15 测试通过
+- **Last Completed**：P0 与 P1 均已在本地 `dev` 提交；P1 包含版本冲突提示、保存状态机、超时与未知结果处理、重复提交防护；15/15 测试通过
 - **Uncommitted Work**：
-  - `src/lib/config.mjs`、`src/routes/config.mjs`（版本冲突逻辑）
-  - `public/index.html`（保存状态机与版本上报）
-  - `tests/worker.test.mjs`、`tests/regression.md`（新增冲突测试与回归项）
-  - `docs/CURRENT_PLAN.md`、`docs/HANDOFF.md`（阶段状态更新）
   - `.workbuddy-ai/`（本轮前已存在的未跟踪本地工具记忆；非业务代码，不应提交或删除）
 - **Validation Performed**：
   - `node --test tests/*.test.mjs`：15/15 通过
