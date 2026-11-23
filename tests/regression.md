@@ -6,6 +6,8 @@
 
 - [ ] `/` 打开页面，标题、搜索框、分区卡片、页脚正常显示。
 - [ ] `ads.txt` 可通过根路径访问。
+- [ ] `/assets/css/app.css` 与 `/assets/js/main.js` 可加载，页面无内联 `<style>` / `<script>`。
+- [ ] 所有带 `onclick` / `ondrag*` 的控件仍可正常触发（模块入口已将处理器挂到 window）。
 - [ ] Tailwind / Font Awesome 等 CDN 资源加载正常。
 - [ ] `src/`、`docs/`、`wrangler.jsonc` 等内部文件无法通过 HTTP 访问。
 

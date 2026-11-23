@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-**Phase 2 — P1 数据与状态管理（Completed，待阶段验收，2026-11-23）**
+**Phase 3 — P2 前端模块化（Completed，待阶段验收，2026-11-23）**
 
 ## Goal
 
@@ -25,10 +25,13 @@
 - P1 已在 `dev` 分支完成：配置写入增加版本冲突提示（409 + 当前版本），明确不保证原子性（D-011）。
 - 前端增加保存状态机（idle/saving/saved/failed/unknown）、8 秒超时、结果未知提示、重复提交防护与已保存状态展示。
 - 新增版本冲突测试，测试总数达到 15/15 通过。
+- P2 已在 `dev` 分支完成：`index.html` 的内联 CSS 与 JS 已拆分到 `public/assets/css/app.css` 与原生 ES Modules。
+- 建立 `core/state`、`core/api`、`core/i18n`、`features/starfield`、`appearance`、`widgets`、`navigation`、`admin` 等模块入口，`main.js` 负责启动与内联事件兼容。
+- 保留全部页面结构、视觉效果与交互处理器；回归清单增加模块化加载项。
 
 ## In Progress
 
-无。P1 已在 `dev` 分支完成实现与本地验证，等待阶段验收；不推送、不切生产域名、不进入 P2。
+无。P2 已在 `dev` 分支完成实现与本地验证，等待阶段验收；不推送、不切生产域名、不进入 P3。
 
 ## Remaining
 
@@ -49,7 +52,7 @@
   2. 增加 `version` / `updatedAt` 与尽力而为冲突提示，不承诺原子乐观锁（D-011）。
   3. 统一保存状态机：`idle / saving / saved / failed / unknown`，超时保留草稿。
   4. 防重复提交与静默覆盖。
-- **P2 — 前端模块化（Planned）**
+- **P2 — 前端模块化（Completed，待阶段验收）**
   1. 渐进拆分 `index.html` 为 HTML、CSS 与原生 ES Modules。
   2. 按核心、导航、外观、组件、后台划分模块，避免过度拆分。
   3. 保持全部现有功能、视觉效果和交互行为。
@@ -84,15 +87,16 @@
 - 上一轮 Node 语法检查通过：`functions/api/config.js`、`functions/api/links.js`、`index.html` 内联脚本。
 - P0 验证：`node --check` 覆盖全部 `.mjs` 模块与测试；`node --test` 14/14 通过；`public/index.html` 内联脚本语法通过；公开目录仅含 `index.html`、`ads.txt`、`assets/`；敏感字符串扫描通过。
 - P1 验证：`node --test` 15/15 通过，新增过期版本返回 409 的测试；`public/index.html` 内联脚本语法通过；保存状态机已加入回归清单。
+- P2 验证：HTML 已无内联 `<style>` / `<script>`；模块导入路径全部有效；55 个导出均有声明；16 个内联处理器均已挂载到 window（其中 `event` 为内联表达式保留字）；全部模块语法检查通过；15/15 测试通过。
 - 未执行：真实 Cloudflare preview 部署与 KV 端到端验证；浏览器交互回归需在有环境的机器上执行；GitHub Actions 尚未建立（P3）。
 
 ## Blockers
 
-- 无技术阻塞；P1 已完成，等待阶段验收。
+- 无技术阻塞；P2 已完成，等待阶段验收。
 - 真实 Cloudflare preview 部署与 KV 端到端验证尚未执行；需要配置 KV ID 与 `SESSION_SECRET` 后完成。本地环境无 Wrangler，未安装新依赖。
 - 新远端 `Navix.git` 在迁移完成并验证后再配置，当前不推送（D-014）。
 - `.workbuddy-ai/` 为本地工具记忆，不应提交或删除。
 
 ## Next Action
 
-提交 P1 阶段报告（变更清单、测试结果、遗留风险）；等待用户确认后再进入 P2。在此之前不推送、不配置生产域名、不进入 P2。
+提交 P2 阶段报告（变更清单、测试结果、遗留风险）；等待用户确认后再进入 P3。在此之前不推送、不配置生产域名、不进入 P3。

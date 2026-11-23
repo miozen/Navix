@@ -1,0 +1,233 @@
+/* 日间模式 (Light) 基础样式 */
+        body.theme-light {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #0f172a;
+        }
+        body.theme-light .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+        body.theme-light .glass-input {
+            background: rgba(0, 0, 0, 0.04);
+            color: #000;
+        }
+        body.theme-light input::placeholder { color: #94a3b8; }
+        body.theme-light #engine-menu { background: #ffffff; border-color: #e2e8f0; }
+        body.theme-light #engine-menu button { color: #334155; }
+        body.theme-light #engine-menu button:hover { background: rgba(79, 70, 229, 0.08); }
+
+        /* 夜间模式 (Dark) 基础样式 */
+        body.theme-dark {
+            background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            color: #f8fafc;
+        }
+        body.theme-dark .glass-card {
+            background: rgba(30, 41, 59, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        body.theme-dark .glass-input {
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        /* 自定义壁纸激活状态的遮罩 */
+        body.has-custom-bg::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(2px);
+            z-index: -1;
+        }
+
+        /* 全局过渡动画 */
+        body, .glass-card, .glass-input {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dragging {
+            opacity: 0.4;
+            transform: scale(0.98);
+            border: 2px dashed #6366f1 !important;
+        }
+
+        /* 隐藏非管理员可见元素 */
+        body:not(.is-admin) .admin-only {
+            display: none !important;
+        }
+
+        :root {
+            --mio-accent: #8b5cf6;
+            --mio-accent-2: #14b8a6;
+            --mio-line-dark: rgba(148, 163, 184, 0.16);
+            --mio-line-light: rgba(15, 23, 42, 0.10);
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            min-height: 100vh;
+            overflow-x: hidden;
+            letter-spacing: 0;
+        }
+
+        body.theme-dark {
+            background:
+                radial-gradient(circle at 50% -10%, rgba(139, 92, 246, 0.22), transparent 34rem),
+                linear-gradient(145deg, #111827 0%, #0a0f1f 48%, #050816 100%);
+        }
+
+        body.theme-light {
+            background:
+                radial-gradient(circle at 50% -12%, rgba(20, 184, 166, 0.18), transparent 36rem),
+                linear-gradient(145deg, #f8fafc 0%, #eef2f7 48%, #e2e8f0 100%);
+        }
+
+        body.theme-dark .glass-card,
+        body.theme-dark .glass-input {
+            background: rgba(15, 23, 42, 0.58);
+            border-color: var(--mio-line-dark);
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+        }
+
+        body.theme-light .glass-card,
+        body.theme-light .glass-input {
+            background: rgba(255, 255, 255, 0.76);
+            border-color: var(--mio-line-light);
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        }
+
+        body.has-custom-bg::before {
+            background:
+                linear-gradient(180deg, rgba(2, 6, 23, 0.34), rgba(2, 6, 23, 0.68)),
+                rgba(15, 23, 42, 0.32);
+            backdrop-filter: blur(4px) saturate(1.05);
+        }
+
+        #starfield {
+            opacity: 0.42;
+            mix-blend-mode: screen;
+        }
+
+        body.theme-light #starfield {
+            opacity: 0.22;
+            mix-blend-mode: multiply;
+        }
+
+        .max-w-5xl {
+            max-width: 70rem;
+        }
+
+        #clock {
+            font-size: clamp(3rem, 8vw, 5.75rem);
+            line-height: 0.95;
+            filter: drop-shadow(0 14px 34px rgba(99, 102, 241, 0.18));
+        }
+
+        #greeting,
+        #weather-info {
+            line-height: 1.55;
+        }
+
+        #search-form .glass-input {
+            min-height: 4.25rem;
+            border-radius: 1.25rem;
+            box-shadow: 0 22px 55px rgba(0, 0, 0, 0.24);
+        }
+
+        #search-form .glass-input:focus-within {
+            transform: translateY(-1px);
+            border-color: rgba(139, 92, 246, 0.7);
+            box-shadow: 0 24px 65px rgba(99, 102, 241, 0.20);
+        }
+
+        #search-input {
+            font-size: 1.05rem;
+        }
+
+        #engine-menu,
+        #theme-panel {
+            border-radius: 1rem;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+        }
+
+        #theme-panel button,
+        #engine-menu button {
+            min-height: 2.25rem;
+        }
+
+        #main-nav-grid {
+            gap: 1rem;
+        }
+
+        #main-nav-grid > .glass-card,
+        .w-full.relative.z-10.mb-12 > .glass-card {
+            border-radius: 1rem;
+            padding: 1.15rem;
+        }
+
+        #main-nav-grid > .glass-card:hover,
+        .w-full.relative.z-10.mb-12 > .glass-card:hover {
+            transform: translateY(-1px);
+            border-color: rgba(139, 92, 246, 0.28);
+        }
+
+        #friend-links-container > div,
+        #main-nav-grid .grid > div {
+            border-radius: 0.75rem;
+            min-height: 2.65rem;
+        }
+
+        #modal > div {
+            border-radius: 1rem;
+            box-shadow: 0 32px 90px rgba(0, 0, 0, 0.42);
+        }
+
+        .admin-only {
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        @media (max-width: 640px) {
+            .max-w-5xl {
+                padding-top: 4.5rem;
+                padding-bottom: 2rem;
+            }
+
+            #search-form .glass-input {
+                min-height: 3.75rem;
+                border-radius: 1rem;
+            }
+
+            #search-input {
+                font-size: 1rem;
+            }
+
+            #clock {
+                font-size: clamp(2.85rem, 16vw, 4rem);
+            }
+
+            #greeting,
+            #weather-info {
+                font-size: 0.8rem;
+            }
+
+            #theme-panel {
+                width: min(19rem, calc(100vw - 2rem));
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                scroll-behavior: auto !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
