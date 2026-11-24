@@ -5,14 +5,14 @@
 - **Last Updated**：2026-11-24 20:35 GMT+8
 - **Current Branch**：`dev`
 - **Remote**：远端名以各机 `git remote -v` 为准；本机为 `origin`、部分机器为 `navix`，均指向 `https://github.com/miozen/Navix.git`
-- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；`dev` 本地 HEAD 为 `ed2a4ef`。`main` 远端为 `365d0a1`（Merge PR #3）
-- **Local vs Remote**：`origin/dev` = `ed2a4ef`；`origin/main` = `365d0a1`（PR #1、#2、#3 均已合并上线）。`dev` 工作区现有全面审查缺陷修复与加固改动待提交
-- **Working Tree**：本轮改动涉及 6 个文件（public/index.html, app.css, app.js, tests/regression.md, CURRENT_PLAN.md, HANDOFF.md），本地测试 41/41 + 冒烟 5/5 通过，尚未提交
-- **Current Phase**：P0 ～ P3 全部完成；PR #1、#2、#3 均已合并上线；本轮缺陷修复与稳定性加固待提交
-- **Current Task**：提交本轮加固改动到 `dev`，创建新的 `dev → main` PR 并合并（用户明确要求走 PR，禁止直接推送 `main`）
+- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；`dev` 本地 HEAD 为 `3c3e9ee`。`main` 远端为 `365d0a1`（Merge PR #3）
+- **Local vs Remote**：`origin/dev` = `3c3e9ee`；`origin/main` = `365d0a1`（PR #1、#2、#3 均已合并上线）。`dev` 已推送远端，待创建 PR #4 合并到 main
+- **Working Tree**：工作区干净
+- **Current Phase**：P0 ～ P3 全部完成；PR #1、#2、#3 均已合并上线；本轮缺陷修复与稳定性加固已推送到 dev
+- **Current Task**：用户在 GitHub 创建并合并新的 `dev → main` PR（PR #4）后自动部署上线
 - **Last Completed**：
   - PR #1、#2、#3 均已成功合并上线。
-  - 本轮全面审查缺陷修复与稳定性加固（已完成本地测试）：
+  - 本轮全面审查缺陷修复与稳定性加固已提交并推送至 `dev`（`3c3e9ee`）：
     1. 回到顶部按钮彻底根治：清除 HTML 行内 `style="visibility: hidden;"` 与 `opacity-0` 冲突样式；CSS 规范 `.back-to-top` 默认隐藏及 `.is-visible` 渐变展示态；JS 改为 `window.scrollY > 160` + `requestAnimationFrame` 节流更新，各分辨率与不同内容高度均能平滑稳定出现/回顶。
     2. XSS 漏洞修复：封装 `escapeHtml` 工具函数，对动态拼入 DOM 的书签标题/URL、分区名称、友链名称/URL、搜索引擎名称/URL/草稿进行完整转义；图标加 `loading="lazy"`。
     3. 防误删二次确认：`deleteSectionLink` 与 `deleteFriendLink` 激活 `confirm(t('delConfirm'))`。
