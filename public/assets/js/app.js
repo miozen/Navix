@@ -207,8 +207,8 @@
                             ? '首次使用，请先设置一个自己的管理员密码（至少 8 位），否则无法保存配置。'
                             : 'First time use: please set your own admin password (at least 8 characters) before saving config.');
                     } else {
+                        // 登录成功不再弹二次提示：管理员按钮/徽章出现即为进入管理态的反馈。
                         localStorage.removeItem('nav_must_change_pwd');
-                        alert(t('pwdSuccess'));
                     }
                 } else {
                     alert(data.message || t('pwdFail'));
@@ -226,20 +226,22 @@
                 const ok = confirm(currentLang === 'zh'
                     ? '确定要退出后台管理吗？'
                     : 'Log out of admin mode?');
-                if (ok) logoutAdmin();
+                if (ok) logoutAdmin(true);
                 return;
             }
             triggerAdminLogin();
         }
 
-        async function logoutAdmin() {
+        // silent=true 时不再弹成功提示（用于页脚已 confirm 的场景，避免二次提示）；
+        // 默认保留提示（用于设置面板退出按钮与 401 被动退出，让用户知道会话已失效）。
+        async function logoutAdmin(silent = false) {
             try {
                 await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
             } catch (e) {
                 console.warn('退出请求失败', e);
             }
             localStorage.removeItem('nav_admin_auth');
-            alert(t('logoutMsg'));
+            if (!silent) alert(t('logoutMsg'));
             expandedDynamicSections = {};
             checkAdminSession();
             document.getElementById('theme-panel').classList.add('hidden');
@@ -508,12 +510,25 @@
         function toggleThemeMenu(e) { e.stopPropagation(); document.getElementById('theme-panel').classList.toggle('hidden'); }
         function setBaseTheme(themeName) { document.body.classList.remove('theme-light', 'theme-dark'); document.body.classList.add(themeName); localStorage.setItem('nav_theme_mode', themeName); document.getElementById('theme-panel').classList.add('hidden'); }
 
-        // 回到顶部：根据滚动距离切换按钮显隐，点击平滑滚动（scroll-behavior: smooth 已在 CSS 设置）
-        function updateBackToTop() {
+        // 回到顶部：顶部标题区滚出视口时显示按钮，滚回可见时隐藏。
+        // 用 IntersectionObserver 而非固定像素阈值，链接多少都能正确触发。
+        function initBackToTop() {
             const btn = document.getElementById('back-to-top');
-            if (!btn) return;
-            if (window.scrollY > 300) btn.classList.add('is-visible');
-            else btn.classList.remove('is-visible');
+            const hero = document.getElementById('hero-header');
+            if (!btn || !hero) return;
+            const show = (visible) => btn.classList.toggle('is-visible', visible);
+            if (typeof IntersectionObserver === 'undefined') {
+                // 降级：老浏览器用滚动位置兜底
+                const onScroll = () => show(window.scrollY > hero.offsetHeight);
+                window.addEventListener('scroll', onScroll, { passive: true });
+                onScroll();
+                return;
+            }
+            const observer = new IntersectionObserver((entries) => {
+                // hero 不再与视口相交（已滚出顶部）时显示回顶按钮
+                show(!entries[0].isIntersecting && entries[0].boundingClientRect.bottom < 0);
+            }, { threshold: 0 });
+            observer.observe(hero);
         }
         function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -615,7 +630,6 @@
                     const iconSizeClass = 'w-5 h-5 text-[10px]';
                     const imgSizeClass = 'w-5 h-5';
                     const textSizeClass = 'text-sm';
-                    const prClass = 'pr-12';
                     const dragMrClass = 'mr-2.5';
                     const btnClass = 'right-2 text-xs p-1';
 
@@ -635,7 +649,7 @@
                         } catch (e) {}
 
                         linksHtml += `
-                        <div class="group relative flex items-center justify-between ${pClass} bg-slate-500/5 border border-slate-500/10 rounded-xl hover:bg-indigo-600/10 transition-all"
+                        <div class="link-card group relative flex items-center justify-between ${pClass} bg-slate-500/5 border border-slate-500/10 rounded-xl hover:bg-indigo-600/10 transition-all"
                              draggable="true"
                              ondragstart="handleDragStart(event, 'link', '${sec.id}', ${idx})"
                              ondragend="handleDragEnd(event)"
@@ -643,11 +657,11 @@
                              ondrop="handleDrop(event, 'link', '${sec.id}', ${idx})">
                             <div class="flex items-center w-full overflow-hidden">
                                 <i class="fas fa-grip-vertical text-slate-500 opacity-0 group-hover:opacity-50 transition-opacity ${dragMrClass} cursor-move admin-only text-[10px] shrink-0"></i>
-                                <a href="${link.url}" draggable="false" target="_blank" rel="noopener noreferrer" class="flex items-center ${spaceXClass} truncate w-full ${prClass}">
+                                <a href="${link.url}" draggable="false" target="_blank" rel="noopener noreferrer" title="${displayName}" class="link-title flex items-center ${spaceXClass} w-full pr-1">
                                     ${iconHtml} <span class="section-link-label ${textSizeClass} font-medium truncate">${displayName}</span>
                                 </a>
                             </div>
-                            <div class="admin-only absolute right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            <div class="admin-only link-actions absolute right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                 <button type="button" onclick="openEditLinkModal('section', '${sec.id}', ${idx})" class="text-xs p-1 text-slate-400 hover:text-sky-400 bg-slate-500/20 rounded cursor-pointer" title="编辑"><i class="fas fa-pen"></i></button>
                                 <button type="button" onclick="deleteSectionLink(event, '${sec.id}', ${idx})" class="text-xs p-1 text-slate-400 hover:text-red-400 bg-slate-500/20 rounded cursor-pointer" title="删除"><i class="fas fa-trash-alt"></i></button>
                             </div>
@@ -932,8 +946,9 @@
             } else if (target.startsWith('section_')) {
                 textEl.innerText = t('modalAddSection');
             }
-            document.querySelector('#modal button[data-i18n="btnSave"]').setAttribute('data-i18n', 'btnSave');
-            document.querySelector('#modal button[data-i18n="btnSave"]').innerText = t('btnSave');
+            const saveBtn = document.getElementById('modal-save-btn');
+            saveBtn.setAttribute('data-i18n', 'btnSave');
+            saveBtn.innerText = t('btnSave');
             toggleModal(true);
         }
 
@@ -951,7 +966,7 @@
             if (!link) return;
             editingTarget = { type, secId, idx };
             document.getElementById('modal-title-text').innerText = t('modalEdit');
-            const saveBtn = document.querySelector('#modal button[data-i18n="btnSave"]');
+            const saveBtn = document.getElementById('modal-save-btn');
             saveBtn.setAttribute('data-i18n', 'btnSaveEdit');
             saveBtn.innerText = t('btnSaveEdit');
             toggleModal(true, link.name, link.url);
@@ -1037,9 +1052,9 @@
 
             links.forEach((item, index) => {
                 container.innerHTML += `
-                    <div class="group relative flex items-center justify-between p-2.5 bg-slate-500/5 border border-slate-500/10 rounded-xl hover:bg-emerald-600/10 transition-all text-center">
-                        <a href="${item.url}" draggable="false" target="_blank" rel="noopener noreferrer" class="friend-link-label w-full text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors truncate px-2 pr-12">${item.name}</a>
-                        <div class="admin-only absolute right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div class="link-card group relative flex items-center justify-between p-2.5 bg-slate-500/5 border border-slate-500/10 rounded-xl hover:bg-emerald-600/10 transition-all text-center">
+                        <a href="${item.url}" draggable="false" target="_blank" rel="noopener noreferrer" title="${item.name}" class="link-title friend-link-label w-full text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors truncate px-2">${item.name}</a>
+                        <div class="admin-only link-actions absolute right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button type="button" onclick="openEditLinkModal('friend', null, ${index})" class="text-[10px] text-slate-400 hover:text-sky-400 bg-slate-500/10 px-1 rounded cursor-pointer" title="编辑"><i class="fas fa-pen"></i></button>
                             <button type="button" onclick="deleteFriendLink(event, ${index})" class="text-[10px] text-slate-500 hover:text-red-400 bg-slate-500/10 px-1 rounded cursor-pointer" title="删除"><i class="fas fa-times"></i></button>
                         </div>
@@ -1126,6 +1141,6 @@ export {
     saveActiveLink,
     loadFriendLinks,
     deleteFriendLink,
-    updateBackToTop,
+    initBackToTop,
     scrollToTop
 };

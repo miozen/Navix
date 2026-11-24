@@ -3,7 +3,7 @@ import { setLanguage, applyLanguage } from './core/i18n.js';
 import { initCloudData } from './core/api.js';
 import { checkAdminSession, triggerAdminLogin, handleAdminTrigger, logoutAdmin, updateAdminPwd } from './features/admin.js';
 import { toggleThemeMenu, setBaseTheme, applyCustomBg, clearCustomBg } from './features/appearance.js';
-import { updateClockAndGreeting, fetchWeather, updateBackToTop, scrollToTop } from './features/widgets.js';
+import { updateClockAndGreeting, fetchWeather, initBackToTop, scrollToTop } from './features/widgets.js';
 import {
     handleDragStart, handleDragEnd, handleDragOver, handleDrop,
     addCustomSection, renameCustomSection, deleteCustomSection,
@@ -29,9 +29,8 @@ Object.assign(window, {
 // 搜索引擎提交由自定义 URL 模板接管（含 {q} 占位符），不走表单默认 action
 document.getElementById('search-form')?.addEventListener('submit', handleSearchSubmit);
 
-// 回到顶部按钮：滚动时切换显隐（passive 提升滚动性能）
-window.addEventListener('scroll', updateBackToTop, { passive: true });
-updateBackToTop();
+// 回到顶部按钮：顶部标题滚出视口时显示（IntersectionObserver，见 app.js）
+initBackToTop();
 
 // --- 10. 初始化与键盘快捷键 ---
         document.addEventListener('click', () => {

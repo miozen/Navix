@@ -269,3 +269,12 @@
             background: rgba(30, 41, 59, 0.85);
             border: 1px solid rgba(100, 116, 139, 0.5);
         }
+
+        /* 链接标题默认一行完整显示；仅管理员悬停时让位给编辑/删除按钮 */
+        .link-title {
+            transition: padding-right 0.18s ease;
+        }
+
+        body.is-admin .link-card:hover .link-title {
+            padding-right: 3.25rem;
+        }
