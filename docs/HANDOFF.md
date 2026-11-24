@@ -23,13 +23,13 @@
   - GitHub Actions 云端首次运行（push 后验证）
   - 生产切换与回退演练
 - **Known Issues / Blockers**：
-  - `SESSION_SECRET` 需通过 Wrangler secret 配置；`wrangler.jsonc` 中 KV ID 为占位符。
-  - 新密码必须用 `scripts/generate-admin-auth.mjs` 重新生成哈希并写入 `admin_auth`，旧密码不得复用。
+  - `SESSION_SECRET` 需通过 Cloudflare 后台 Secret 配置；生产 KV ID 已写入 `wrangler.jsonc`（`e20a2207b12549a7abe68eb7ce272b24`）。
+  - 管理员密码：内置默认 `navix666`，首次登录必须改密，改密后写入 KV `admin_auth`；旧密码 `admin888` 不得复用（D-015）。无需再跑 `generate-admin-auth.mjs`，该脚本仅作应急备用。
   - 版本检测仅为尽力而为提示；会话失效受 KV 最终一致性影响。
   - 旧 `main` 含公开密码漏洞，禁止推送或作为回退目标。
   - 仓库根目录旧版 `index.html`（非 `public/index.html`）仍含明文 `admin888` 与旧 Token 逻辑，不在公开目录、不影响 Workers 发布，但不得用于部署；是否删除待用户决定（删除属破坏性操作，未擅自执行）。
-  - Git 集成部署需在 Cloudflare 后台一次性配置：连接仓库、`SESSION_SECRET` Secret、KV `admin_auth` 哈希（详见 README）；KV 由平台自动创建，ID 不入库。
-- **Exact Next Action**：在 Cloudflare 后台按 README 连接 Git 并配置 Secret 与 admin_auth；开 `dev → main` PR 拿 Preview URL 做端到端验证，通过后合并 `main` 触发生产部署。
+  - Git 集成部署需在 Cloudflare 后台一次性配置：连接仓库、`SESSION_SECRET` Secret；KV ID 已写入配置，管理员密码用默认值登录后在网站内改（详见 README、D-015）。
+- **Exact Next Action**：在 Cloudflare 后台按 README 连接 Git 并配置 Secret；开 `dev → main` PR 拿 Preview URL，用 `navix666` 登录并首次改密做端到端验证，通过后合并 `main` 触发生产部署。
 - **Cross-machine Ready**：`YES`（以 `origin/dev` 或 `origin/main` 为接力点）
 
 ## 稳定恢复清单

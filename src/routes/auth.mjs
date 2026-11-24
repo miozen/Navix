@@ -36,6 +36,12 @@ export async function isAuthenticated(request, env) {
   return payload.v === auth.sessionVersion;
 }
 
+// 是否仍在使用内置默认密码（首次登录后必须改密）。
+export async function isUsingDefaultAuth(env) {
+  const auth = await getAdminAuth(env);
+  return auth ? auth.isDefault === true : false;
+}
+
 async function readJson(request) {
   try {
     const body = await request.json();
@@ -64,7 +70,12 @@ export async function handleLogin(request, env) {
     env.SESSION_SECRET
   );
   return json(
-    { success: true, message: '登录成功', sessionVersion: auth.sessionVersion },
+    {
+      success: true,
+      message: '登录成功',
+      sessionVersion: auth.sessionVersion,
+      mustChangePassword: auth.isDefault === true
+    },
     200,
     { 'Set-Cookie': sessionCookie(request, token), 'Cache-Control': 'no-store' }
   );

@@ -234,3 +234,85 @@ test('畸形 JSON 请求体返回 400', async () => {
   }), env);
   assert.equal(malformed.status, 400);
 });
+
+test('默认密码可登录并标记必须改密', async () => {
+  const { env } = setupEnv();
+  const login = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'navix666' })
+  }), env);
+  assert.equal(login.status, 200);
+  const body = await login.json();
+  assert.equal(body.mustChangePassword, true);
+});
+
+test('默认密码态禁止保存配置，改密后放行', async () => {
+  const { env, store } = setupEnv();
+  const login = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'navix666' })
+  }), env);
+  const cookie = login.headers.get('Set-Cookie').split(';')[0];
+
+  const blocked = await worker.fetch(request('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify({ friendLinks: [] })
+  }), env);
+  assert.equal(blocked.status, 403);
+  assert.equal((await blocked.json()).mustChangePassword, true);
+
+  const relogin = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'navix666' })
+  }), env);
+  const cookie2 = relogin.headers.get('Set-Cookie').split(';')[0];
+  const change = await worker.fetch(request('/api/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie2 },
+    body: JSON.stringify({ oldPassword: 'navix666', newPassword: 'my-own-pass-123' })
+  }), env);
+  assert.equal(change.status, 200);
+  assert.ok(store.get('admin_auth'), '改密后应写入 KV');
+
+  const login2 = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'my-own-pass-123' })
+  }), env);
+  assert.equal(login2.status, 200);
+  assert.equal((await login2.json()).mustChangePassword, false);
+
+  const cookie3 = login2.headers.get('Set-Cookie').split(';')[0];
+  const save = await worker.fetch(request('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie3 },
+    body: JSON.stringify({ friendLinks: [] })
+  }), env);
+  assert.equal(save.status, 200);
+});
+
+test('改密后默认密码失效', async () => {
+  const { env } = setupEnv();
+  const login = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'navix666' })
+  }), env);
+  const cookie = login.headers.get('Set-Cookie').split(';')[0];
+  await worker.fetch(request('/api/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify({ oldPassword: 'navix666', newPassword: 'my-own-pass-123' })
+  }), env);
+
+  const stale = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'navix666' })
+  }), env);
+  assert.equal(stale.status, 401);
+});

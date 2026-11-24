@@ -33,6 +33,8 @@
 - 接力稳定：新增 `.gitignore`，更新 `ARCHITECTURE.md` 与 `AGENTS.md` 的远端/分支规则，明确 Git 为接力依据。
 - `dev` 分支已推送到远端（本机远端名为 `origin`，指向 `https://github.com/miozen/Navix.git`；部分机器名为 `navix`），可作为跨电脑开发接力点。
 - P3 工程化已完成：测试扩充至 33/33 通过（新增页面静态冒烟与多项 API/边界用例）；新增 `.github/workflows/ci.yml` 零依赖 CI；`wrangler.jsonc` 增补三环境边界注释；README 已由 Pages 旧教程重写为 Workers 部署教程并移除明文密码。
+- 生产 KV ID 已写入 `wrangler.jsonc`（`e20a2207b12549a7abe68eb7ce272b24`，Cloudflare 惯例，ID 非凭据）。
+- D-015 已获用户确认并实施：内置默认密码 `navix666` + 首次强制改密，替代 D-010 中"禁止公开初始密码"一条；D-010 其余原则保留。测试增至 36/36 通过。
 
 ## In Progress
 
@@ -99,7 +101,7 @@
 ## Blockers
 
 - 无技术阻塞；P0 ～ P3 与接力稳定均已完成。
-- Cloudflare 端到端验证尚未执行；需在后台连接 Git 并配置 `SESSION_SECRET` 与 KV `admin_auth` 后完成。KV 由平台自动创建，无需本地 Wrangler 或 KV ID。
+- Cloudflare 端到端验证尚未执行；需在后台连接 Git 并配置 `SESSION_SECRET` 后完成。管理员密码用内置默认值 `navix666`，首次登录在网站内改密即写入 KV（D-015），无需手动写 KV。
 - 安全生产基线 `main` 已从当前安全代码建立并推送（不含旧版公开密码漏洞）；后续只允许来自 `dev` 的已验证合并（D-013、D-014）。
 - `.workbuddy-ai/` 已在 `.gitignore` 中排除，不应提交或删除。
 - 仓库根目录遗留旧版 `index.html` 含明文密码与旧 Token 逻辑（不在 `public/`、不被 Workers 发布）；是否删除待用户决定，已在 README 与 HANDOFF 标注为不得部署。
@@ -107,7 +109,7 @@
 ## Next Action
 
 部署方案已确定为 Cloudflare Workers Git 集成（零本地配置），两件待办按顺序：
-1. Cloudflare 后台一次性配置：连接 `Navix` GitHub 仓库（生产分支 `main`、无构建命令）、添加 `SESSION_SECRET` Secret、在自动创建的 KV 写入 `admin_auth` 哈希（详见 README）。
-2. 开 `dev → main` PR 获取 Preview URL，执行 `tests/regression.md` 端到端验证；通过后合并 `main` 触发生产部署（D-013、D-014）。
+1. Cloudflare 后台一次性配置：连接 `Navix` GitHub 仓库（生产分支 `main`、无构建命令）、添加 `SESSION_SECRET` Secret（详见 README）。KV ID 已写入配置。
+2. 开 `dev → main` PR 获取 Preview URL，执行 `tests/regression.md` 端到端验证：用默认密码 `navix666` 登录 → 首次强制改密 → 验证配置可保存；通过后合并 `main` 触发生产部署（D-013、D-014、D-015）。
 
 常规开发阶段已全部完成；除非用户提出新需求，否则不再进入新的 Phase。

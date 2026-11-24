@@ -1,4 +1,4 @@
-import { isAuthenticated } from './auth.mjs';
+import { isAuthenticated, isUsingDefaultAuth } from './auth.mjs';
 import { getSiteConfig, saveSiteConfig } from '../lib/config.mjs';
 import { sanitizeConfig } from '../lib/validation.mjs';
 import { json } from '../lib/http.mjs';
@@ -16,6 +16,13 @@ export async function handleConfig(request, env) {
   if (request.method === 'POST') {
     if (!(await isAuthenticated(request, env))) {
       return json({ success: false, message: '未授权或会话已失效' }, 401);
+    }
+    if (await isUsingDefaultAuth(env)) {
+      return json({
+        success: false,
+        mustChangePassword: true,
+        message: '请先修改默认密码后再保存配置。'
+      }, 403);
     }
 
     let input;

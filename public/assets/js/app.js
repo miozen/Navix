@@ -148,8 +148,20 @@
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && data.success) {
                     localStorage.setItem('nav_admin_auth', 'true');
-                    alert(t('pwdSuccess'));
                     checkAdminSession();
+                    if (data.mustChangePassword) {
+                        localStorage.setItem('nav_must_change_pwd', 'true');
+                        const panel = document.getElementById('theme-panel');
+                        if (panel) panel.classList.remove('hidden');
+                        const pwdInput = document.getElementById('custom-pwd-input');
+                        if (pwdInput) setTimeout(() => pwdInput.focus(), 50);
+                        alert(currentLang === 'zh'
+                            ? '首次使用，请先设置一个自己的管理员密码（至少 8 位），否则无法保存配置。'
+                            : 'First time use: please set your own admin password (at least 8 characters) before saving config.');
+                    } else {
+                        localStorage.removeItem('nav_must_change_pwd');
+                        alert(t('pwdSuccess'));
+                    }
                 } else {
                     alert(data.message || t('pwdFail'));
                 }
@@ -197,8 +209,11 @@
                 document.getElementById('custom-pwd-input').value = '';
                 document.getElementById('theme-panel').classList.add('hidden');
                 localStorage.removeItem('nav_admin_auth');
+                localStorage.removeItem('nav_must_change_pwd');
                 checkAdminSession();
-                alert(data.message || t('pwdUpdateSuccess'));
+                alert(currentLang === 'zh'
+                    ? '密码已设置，请双击页脚用新密码重新登录。'
+                    : 'Password set. Please double-click the footer to log in again with the new password.');
             } catch (e) {
                 console.error('修改密码失败', e);
                 alert(currentLang === 'zh' ? '修改密码失败，无法连接服务器！' : 'Password update failed. Server unavailable.');

@@ -154,7 +154,7 @@ test('损坏的 KV 数据被安全降级，版本递增写入', async () => {
 
 test('管理员记录校验字段完整性，保存时剔除多余字段', async () => {
   const bad = { get: async () => JSON.stringify({ salt: 's', hash: 'h' }) };
-  assert.equal(await getAdminAuth({ NAV_DB: bad }), null);
+  assert.equal((await getAdminAuth({ NAV_DB: bad })).isDefault, true, '无效记录应回退默认凭据');
   const good = { get: async () => JSON.stringify({ salt: 's', hash: 'h', sessionVersion: 2 }) };
   assert.equal((await getAdminAuth({ NAV_DB: good })).sessionVersion, 2);
 
