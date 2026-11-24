@@ -39,11 +39,22 @@
 - **D-016 已通过 GitHub PR #1 合并到 `main`**（`2fddd3a Merge pull request #1 from miozen/dev`），Cloudflare Git 集成自动部署。
 - 线上问题修复第一批（已通过 PR #2 合并上线）：① 保存配置报「engines 格式无效」——前端未初始化时提交 `engines:null`，已做服务端容错（忽略 null 不覆盖）+ 前端 applySiteAppearance 写回有效数组 + 提交 body 过滤 null/undefined；② 根治「偶发保存/添加云端无响应、刷新才恢复」——`saveInProgress` 布尔锁改为串行 Promise 队列，并发保存依次执行且 body 构造移入 try、finally 必释放；③ 新增回到顶部按钮（初版滚动 >300px 显示）；④ 页脚改为单击统一入口（未登录登录 / 已登录确认后退出）。
 - **PR #2 已合并**：`8f634f7 Merge pull request #2 from miozen/dev`，第一批修复上线。
-- 线上问题修复第二批 UI/交互（待提交）：① 设置浮标与面板统一左上角、面板紧贴按钮下方（title 改「打开设置面板」）；② 回顶按钮改用 IntersectionObserver 观察 #hero-header，标题滚出视口才显示（替代固定 300px，解决链接少看不到按钮）；③ 链接标题一行完整显示——去掉固定 pr-12，仅管理员悬停卡片时让位给编辑/删除按钮（分区链接+友链，title 兜底）；④ 修复编辑按钮第二次点击失效——根因为把选择器依赖的 data-i18n 从 btnSave 改成 btnSaveEdit 导致第二次 querySelector 找不到而抛错，改固定 id=modal-save-btn；⑤ 登录/退出提示合并——去掉登录成功 alert 与页脚退出成功 alert（页脚已 confirm），logoutAdmin 加 silent 参数。测试 41/41 + 冒烟 5/5 通过。
+- **PR #3 已合并**：`365d0a1 Merge pull request #3 from miozen/dev`，第二批 UI/交互修复上线（设置面板左上角、链接标题一行、编辑模态框 id、登录退出提示合并）。
+- 本轮审查缺陷修复与稳定性加固（已完成本地实施与测试）：
+  1. 回到顶部按钮根治：移除 HTML 行内 `style="visibility: hidden;"` 与 `opacity-0` 冲突样式；CSS 明确默认态与 `.is-visible` 渐变态；改用 160px 阈值 + `requestAnimationFrame` 节流监听，各屏幕与短页面均可稳定触发。
+  2. XSS 漏洞修复：新增 `escapeHtml` 函数，对动态插入 DOM 的书签标题/URL、分区名称、友链名称/URL、搜索引擎名称/URL/草稿进行完整转义；图标加 `loading="lazy"`。
+  3. 防误删二次确认：`deleteSectionLink` 与 `deleteFriendLink` 接入 `confirm(t('delConfirm'))`。
+  4. 409 冲突死锁修复：发生 409 时自动用服务端最新 `currentVersion` 与 `config` 更新本地状态，避免无法重试。
+  5. 乐观写入失败回滚：书签与分区增删改在云端保存失败时自动回滚本地状态与视图。
+  6. 分区清空不再复活：增加初始化标识 `nav_sections_init`，允许站长清空全部预设分区。
+  7. 弹窗表单支持键盘 Enter 提交（`<form>` 语义包裹）。
+  8. 天气与定位增加 24 小时本地缓存与 429 平滑兜底，避免 `ipapi.co` 频繁限流。
+  9. 自定义壁纸激活时暂停 Canvas 星空渲染循环以节约系统算力。
+  10. 修复改密成功文案（改为单击页脚）并更新回归清单。测试 41/41 与冒烟 5/5 全部通过。
 
 ## In Progress
 
-本轮 5 项 UI/交互改动已在 `dev` 工作区完成实现与本地测试（41/41 + 冒烟 5/5），待提交到 `dev` 并创建新的 `dev → main` PR 合并后由 Cloudflare 自动部署。合并方式必须走 GitHub PR，不直接推送 `main`（用户明确要求）。
+本轮审查缺陷与稳定性加固改动已在 `dev` 完成实现与本地测试（41/41 + 冒烟 5/5 通过），待提交到 `dev` 并创建新的 `dev → main` PR 合并上线。合并方式必须走 GitHub PR，不直接推送 `main`（用户明确要求）。
 
 ## Remaining
 
