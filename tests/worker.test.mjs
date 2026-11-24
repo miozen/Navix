@@ -147,3 +147,90 @@ test('过期版本触发尽力而为冲突提示', async () => {
   assert.equal(body.currentVersion, 7);
   assert.equal(JSON.parse(store.get('site_config')).version, 7);
 });
+
+test('写接口拒绝错误方法，未知路径返回 404', async () => {
+  const { env } = setupEnv();
+  for (const path of ['/api/login', '/api/logout', '/api/password']) {
+    const res = await worker.fetch(request(path), env);
+    assert.equal(res.status, 405, `${path} 应拒绝 GET`);
+  }
+  const put = await worker.fetch(request('/api/config', { method: 'PUT' }), env);
+  assert.equal(put.status, 405);
+  const unknown = await worker.fetch(request('/api/nope'), env);
+  assert.equal(unknown.status, 404);
+  const notApi = await worker.fetch(request('/'), env);
+  assert.equal(notApi.status, 404);
+});
+
+test('未授权 POST 配置返回 401，缺少会话密钥返回 500', async () => {
+  const { env } = setupEnv();
+  await seedAdmin(env);
+  const unauthorized = await worker.fetch(request('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ friendLinks: [] })
+  }), env);
+  assert.equal(unauthorized.status, 401);
+
+  const noSecret = setupEnv();
+  noSecret.env.SESSION_SECRET = '';
+  const res = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: PASSWORD })
+  }), noSecret.env);
+  assert.equal(res.status, 500);
+});
+
+test('改密拒绝过短新密码与错误旧密码', async () => {
+  const { env } = setupEnv();
+  await seedAdmin(env);
+  const login = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: PASSWORD })
+  }), env);
+  const cookie = login.headers.get('Set-Cookie').split(';')[0];
+
+  const tooShort = await worker.fetch(request('/api/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify({ oldPassword: PASSWORD, newPassword: 'short' })
+  }), env);
+  assert.equal(tooShort.status, 400);
+
+  const wrongOld = await worker.fetch(request('/api/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify({ oldPassword: 'wrong', newPassword: 'new-password-123' })
+  }), env);
+  assert.equal(wrongOld.status, 401);
+});
+
+test('退出登录清除会话 Cookie', async () => {
+  const { env } = setupEnv();
+  const res = await worker.fetch(request('/api/logout', { method: 'POST' }), env);
+  assert.equal(res.status, 200);
+  const cookie = res.headers.get('Set-Cookie');
+  assert.match(cookie, /nav_session=;/);
+  assert.match(cookie, /Max-Age=0/);
+  assert.match(cookie, /HttpOnly/);
+});
+
+test('畸形 JSON 请求体返回 400', async () => {
+  const { env } = setupEnv();
+  await seedAdmin(env);
+  const login = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: PASSWORD })
+  }), env);
+  const cookie = login.headers.get('Set-Cookie').split(';')[0];
+
+  const malformed = await worker.fetch(request('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: 'this is not json'
+  }), env);
+  assert.equal(malformed.status, 400);
+});

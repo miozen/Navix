@@ -4,7 +4,9 @@
 
 ## Current Phase
 
-**Phase 4 — 接力稳定与远端同步（Completed，2026-11-23）**
+**Phase 5 — P3 工程化（Completed，2026-11-24）**
+
+> 全部阶段任务已完成；生产切换仍待真实 preview 端到端验证。
 
 ## Goal
 
@@ -29,11 +31,12 @@
 - 建立 `core/state`、`core/api`、`core/i18n`、`features/starfield`、`appearance`、`widgets`、`navigation`、`admin` 等模块入口，`main.js` 负责启动与内联事件兼容。
 - 保留全部页面结构、视觉效果与交互处理器；回归清单增加模块化加载项。
 - 接力稳定：新增 `.gitignore`，更新 `ARCHITECTURE.md` 与 `AGENTS.md` 的远端/分支规则，明确 Git 为接力依据。
-- `dev` 分支已推送到远端 `navix`（`https://github.com/miozen/Navix.git`），可作为跨电脑开发接力点。
+- `dev` 分支已推送到远端（本机远端名为 `origin`，指向 `https://github.com/miozen/Navix.git`；部分机器名为 `navix`），可作为跨电脑开发接力点。
+- P3 工程化已完成：测试扩充至 33/33 通过（新增页面静态冒烟与多项 API/边界用例）；新增 `.github/workflows/ci.yml` 零依赖 CI；`wrangler.jsonc` 增补三环境边界注释；README 已由 Pages 旧教程重写为 Workers 部署教程并移除明文密码。
 
 ## In Progress
 
-无。P0 ～ P2 与接力稳定已完成，`dev` 已推送到 `navix`；当前等待用户确认是否进入 P3。生产域名未切换，旧 `main` 未推送。
+无。P0 ～ P3 与接力稳定均已完成。生产域名未切换，旧 `main` 未推送；剩余工作为需外部环境的真实 preview 验证与生产切换（见 Next Action）。
 
 ## Remaining
 
@@ -58,7 +61,7 @@
   1. 渐进拆分 `index.html` 为 HTML、CSS 与原生 ES Modules。
   2. 按核心、导航、外观、组件、后台划分模块，避免过度拆分。
   3. 保持全部现有功能、视觉效果和交互行为。
-- **P3 — 工程化（Planned）**
+- **P3 — 工程化（Completed，2026-11-24）**
   1. 建立单元测试、Worker API 测试与页面冒烟测试。
   2. GitHub Actions 静态检查；dev / preview / production 环境边界。
   3. 同步 README 与五类核心文档。
@@ -79,7 +82,7 @@
 - **P2**
   - 回归清单 100% 通过；无框架、无构建链。
 - **P3**
-  - CI 通过；三环境配置清晰；跨电脑 Pull 后可执行 Session Start。
+  - CI 工作流已建立且本地逐条复现通过；三环境配置清晰；跨电脑 Pull 后可执行 Session Start。
 
 ## Validation
 
@@ -90,15 +93,21 @@
 - P0 验证：`node --check` 覆盖全部 `.mjs` 模块与测试；`node --test` 14/14 通过；`public/index.html` 内联脚本语法通过；公开目录仅含 `index.html`、`ads.txt`、`assets/`；敏感字符串扫描通过。
 - P1 验证：`node --test` 15/15 通过，新增过期版本返回 409 的测试；`public/index.html` 内联脚本语法通过；保存状态机已加入回归清单。
 - P2 验证：HTML 已无内联 `<style>` / `<script>`；模块导入路径全部有效；55 个导出均有声明；16 个内联处理器均已挂载到 window（其中 `event` 为内联表达式保留字）；全部模块语法检查通过；15/15 测试通过。
-- 未执行：真实 Cloudflare preview 部署与 KV 端到端验证；浏览器交互回归需在有环境的机器上执行；GitHub Actions 尚未建立（P3）。
+- P3 验证：`node --test` 33/33 通过（15 → 33，新增 18 项覆盖库边界、API 分支与页面静态冒烟）；全部 `.mjs` 语法检查通过；CI 工作流四步骤本地逐条复现通过（语法/测试/冒烟/凭据扫描）；明文凭据扫描清零；README 已移除 `admin888` 与公开配置读密码的说明。
+- 未执行：真实 Cloudflare preview 部署与 KV 端到端验证；浏览器交互回归需在有环境的机器上执行；GitHub Actions 云端首次运行需 push 后验证。
 
 ## Blockers
 
-- 无技术阻塞；P0 ～ P2 与接力稳定已完成，等待用户确认是否进入 P3。
-- 真实 Cloudflare preview 部署与 KV 端到端验证尚未执行；需要配置 KV ID 与 `SESSION_SECRET` 后完成。本地环境无 Wrangler，未安装新依赖。
-- 旧 `main` 仍含公开密码漏洞，未推送到 `navix`；生产切换前必须建立安全 `main`（D-013）。
+- 无技术阻塞；P0 ～ P3 与接力稳定均已完成。
+- Cloudflare 端到端验证尚未执行；需在后台连接 Git 并配置 `SESSION_SECRET` 与 KV `admin_auth` 后完成。KV 由平台自动创建，无需本地 Wrangler 或 KV ID。
+- 安全生产基线 `main` 已从当前安全代码建立并推送（不含旧版公开密码漏洞）；后续只允许来自 `dev` 的已验证合并（D-013、D-014）。
 - `.workbuddy-ai/` 已在 `.gitignore` 中排除，不应提交或删除。
+- 仓库根目录遗留旧版 `index.html` 含明文密码与旧 Token 逻辑（不在 `public/`、不被 Workers 发布）；是否删除待用户决定，已在 README 与 HANDOFF 标注为不得部署。
 
 ## Next Action
 
-等待用户确认后进入 P3：补齐单元/API/冒烟测试、GitHub Actions、dev/preview/production 环境边界与文档同步。生产切换前仍需完成真实 preview 端到端验证。
+部署方案已确定为 Cloudflare Workers Git 集成（零本地配置），两件待办按顺序：
+1. Cloudflare 后台一次性配置：连接 `Navix` GitHub 仓库（生产分支 `main`、无构建命令）、添加 `SESSION_SECRET` Secret、在自动创建的 KV 写入 `admin_auth` 哈希（详见 README）。
+2. 开 `dev → main` PR 获取 Preview URL，执行 `tests/regression.md` 端到端验证；通过后合并 `main` 触发生产部署（D-013、D-014）。
+
+常规开发阶段已全部完成；除非用户提出新需求，否则不再进入新的 Phase。

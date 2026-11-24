@@ -1,90 +1,121 @@
-# 🌐 科技共享 - 智能多功能响应式全栈导航
+# Navix — 智能多功能响应式网址导航
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
 ![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=flat&logo=cloudflare&logoColor=white)
 
-一款极简、高颜值的多功能网址导航网站。现已重构升级为 **Serverless 全栈架构**！采用 HTML + Tailwind CSS + 原生 JS 构建精美前端，结合 Cloudflare Pages Functions 与 KV 数据库提供云端 API 支持。
+一款静态优先、零构建的多功能网址导航：原生 HTML / CSS / ES Modules 单页前端，配合 Cloudflare Workers + Static Assets + KV 提供云端配置同步。保持免费计划、无框架、无构建链，可回退、可扩展。
 
-# **详细视频教程：** [点击查看](https://youtu.be/o-D9J6euddY)
+> 本仓库为目标架构（Workers）源码。旧版 Cloudflare Pages 部署的现网仍含已公开的管理员密码漏洞，不得回退或复用其密码。安全约束与决策见 [`docs/DECISIONS.md`](docs/DECISIONS.md)，架构现状见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
+>
+> 注意：仓库根目录的 `index.html` 是迁移前的 Pages 旧版遗留文件，仍含明文默认密码与旧 Token 逻辑。它不在 `public/` 内、不会被 Workers 发布，但不得用于任何部署。唯一有效的页面入口是 `public/index.html`。
 
-# 样本：https://smart-nav-main-test.pages.dev/
+## 核心特性
 
-## ✨ 核心亮点
+- 云端全站同步：壁纸、分区、友链等公开配置保存在 KV，多设备共享；接口不可用时自动降级为浏览器本地缓存。
+- 安全后台：双击页脚进入，签名 HttpOnly Cookie 会话 + `sessionVersion` 失效机制；公开响应不含任何凭据。
+- 中英双语、主题切换、动态星空、时区天气、多搜索引擎、拖拽排序。
+- 零构建部署：仅 `/api/*` 进入 Worker，其余由 Static Assets 提供；`src/`、`docs/`、`tests/` 等不对外公开。
 
-- ☁️ **云端全站同步 (全新升级)**：接入 Cloudflare KV 数据库。管理员设置的“全站壁纸”和“站长推荐”链接将永久保存在云端，所有用户、所有设备打开网站均能实时同步！
-- 🛡️ **优雅降级容灾**：即使云端数据库未配置或接口挂掉，系统会自动无缝切换回浏览器的 `localStorage` 本地缓存模式，保证网站永不崩溃。
-- 🌍 **智能中英双语 (i18n)**：一键切换全局语言，不仅外壳 UI 改变，连同内置数据库中的默认链接也会根据语言智能映射翻译。
-- 🌤️ **智能地理与天气**：自动定位用户所在城市，精准呈现多语言天气图标与温度。
-- 📅 **万年历与节气**：内置农历节气与常规节日动态问候语。
-- 🔐 **轻量级后台管理**：双击底部版权信息触发隐藏后台，凭密码解锁云端数据修改权限。
+## 目录结构
 
----
+```
+public/                 静态站点（唯一公开目录）
+  index.html            页面结构
+  assets/css/app.css    样式
+  assets/js/            原生 ES Modules（core/ + features/）
+src/
+  worker.mjs            Worker 入口，负责 /api/* 路由与同源校验
+  routes/               config / auth 路由
+  lib/                  加密、配置读写、校验、HTTP 工具
+scripts/
+  generate-admin-auth.mjs  生成管理员密码哈希
+tests/                   Node 内置测试与回归清单
+wrangler.jsonc           Worker、静态目录、KV 绑定与三环境配置
+```
 
-## 🚀 部署教程 (Cloudflare Pages 全栈保姆级)
+## 部署教程（Cloudflare Workers · Git 集成，零本地配置）
 
-为了让“云端数据同步”功能正常工作，请严格按照以下顺序操作。**全程免费，无需购买服务器！**
+推荐用 Workers 的 GitHub Git 集成部署：**本地不安装 Wrangler、不填 KV ID、不配密钥**，全部在 Cloudflare 网页后台完成。推送代码即自动构建部署。
 
-### 📦 第一阶段：准备代码
-1. 注册并登录 [GitHub](https://github.com/)。
-2. 将本项目的全部代码（包含 `index.html`, `ads.txt`, `README.md` 以及最关键的 **`functions` 文件夹**）上传到你的 GitHub 仓库中。
-   *⚠️ 注意：请确保 `index.html` 和 `functions` 文件夹直接在仓库的最外层（根目录），不要套在别的文件夹里！*
+### 1. 连接 GitHub 仓库
 
-### 🗄️ 第二阶段：创建云端数据库 (KV)
-1. 登录 [Cloudflare 控制面板](https://dash.cloudflare.com/)。
-2. 在左侧菜单栏点击 **Workers & Pages** -> **KV**。
-3. 点击右侧的 **创建命名空间 (Create a namespace)**。
-4. 命名空间名称填入：`NAV_DATABASE`（或者你喜欢的任何名字），点击**添加**。
+在 Cloudflare 后台进入 **Workers & Pages → Create → Workers → Connect to Git**，授权 GitHub 并选择本仓库。构建配置：
 
-### 🌐 第三阶段：部署前端页面
-1. 在 Cloudflare 控制面板左侧点击 **Workers & Pages**。
-2. 点击蓝色按钮 **创建应用程序 (Create application)** -> 选择 **Pages** 选项卡 -> **连接到 Git (Connect to Git)**。
-3. 选中你刚才存放代码的 GitHub 仓库，点击 **开始设置 (Begin setup)**。
-4. **【关键检查】**：在“构建设置 (Build settings)”区域：
-   - 框架预设 (Framework preset)：选择 `None`
-   - 构建命令 (Build command)：**留空**
-   - 构建输出目录 (Build output directory)：**留空**
-   - **根目录 (Root directory)**：**留空**（非常重要，否则找不到 API！）
-5. 点击 **保存并部署 (Save and Deploy)**。等待几十秒钟，网页会初步部署成功。
+- Framework preset：`None`
+- Build command / Deploy command：**留空**（本项目零构建）
+- Root directory：留空（仓库根目录）
 
-### 🔗 第四阶段：绑定数据库以激活云端功能 (最重要！)
-1. 部署成功后，点击 **继续处理项目 (Continue to project)** 返回项目管理页面。
-2. 依次点击顶部的 **设置 (Settings)** -> 左侧的 **函数 (Functions)** 菜单。
-3. 往下滚动找到 **KV 命名空间绑定 (KV namespace bindings)** 区域，点击 **添加绑定**。
-4. **变量名称 (Variable name)** 严格填入：`NAV_DB` （必须大写，一字不差，这是代码里呼叫数据库的接头暗号）。
-5. **KV 命名空间** 的下拉菜单中，选择你在“第二阶段”创建的那个数据库（比如 `NAV_DATABASE`）。
-6. 点击 **保存**。
+生产分支设为 `main`：日常在 `dev` 开发，验证通过后合并到 `main` 触发生产部署。`dev` 不自动部署生产。
 
-### 🔄 第五阶段：重新部署以生效
-1. 绑定完数据库后，点击顶部的 **部署 (Deployments)** 选项卡。
-2. 找到列表里最新的一次部署，点击右侧的 **重试部署 (Retry deployment)**。
-3. 等待重新构建完成。此时，你的前端界面就和云端数据库彻底打通了！
+### 2. KV 自动创建（无需手动建）
 
-🎉 **大功告成！** 点击 Cloudflare 提供的 `xxx.pages.dev` 域名打开网站，双击底部版权文字登录后台，尝试修改壁纸和链接并点击“应用”。换个浏览器刷新，见证云端同步的魔法吧！
+`wrangler.jsonc` 里 KV 只声明 `binding: "NAV_DB"`、不写 `id`。首次通过 Git 集成部署时，Cloudflare 会自动创建 KV namespace，其 ID 仅在后台可见、**不会写回仓库**。因此仓库中永远不含真实 KV ID，无需手动创建或复制粘贴 ID。
 
----
+### 3. 配置会话密钥（Secret）
 
-## ⚙️ 进阶配置说明
+在 Worker 的 **Settings → Variables & Secrets → Add** 添加 Secret：
 
-### 1. 修改管理员密码
-默认的后台管理密码是 `admin888`。登录后可自行修改
-如忘记密码
-登录 Cloudflare 控制面板。
+- 名称：`SESSION_SECRET`
+- 值：一个足够长的随机字符串（仅存后台，不进仓库）
 
-在左侧菜单栏点击 Workers & Pages -> 然后点击下拉菜单里的 KV。
+`SESSION_SECRET` 用于签名会话 Cookie。变更它会使所有现有会话失效。
 
-在右侧的列表中，找到你之前创建的那个数据库名称（比如 NAV_DATABASE），点击它进入查看。
+### 4. 设置管理员密码（写入 KV，只存哈希）
 
-在下方的数据列表里，你会看到一个名为 site_config 的键（Key）。
+管理员凭据必须存在 KV 的 `admin_auth` 键（只读的 Secret 无法支持改密功能），且只存哈希、不存明文。生成哈希：
 
-点击这个键右侧的 “查看” (View) 或 “编辑” (Edit)。
+```bash
+ADMIN_PASSWORD='你的新密码（至少 8 位）' node scripts/generate-admin-auth.mjs
+```
 
-你会看到一段类似于这样的代码：
+在后台 **Workers & Pages → KV → 对应 namespace → Add entry**，键名为 `admin_auth`，值为脚本输出的 JSON（含 `salt`、`hash`、`sessionVersion`）。
 
+重要：任何曾经通过旧版公开接口暴露过的密码都不得复用。忘记密码时只能重新生成新哈希写入，不能回填旧密码（D-010）。改密接口会就地更新此键并递增 `sessionVersion` 使旧会话失效。
 
-JSON
-{"wallpaper":"xxx","dynamicSections":[],"adminPwd":"你忘记的那个密码"}
+### 5. 测试与生产切换
 
+- **测试**：在 GitHub 开 `dev → main` 的 Pull Request，Cloudflare 会为该 PR 生成隔离的 Preview URL（在 PR 评论里）。在该地址执行 `tests/regression.md` 的浏览器回归与端到端验证，不影响生产。
+- **生产**：验证通过后合并 PR 到 `main`，Git 集成自动部署生产。回退目标只能是已修复漏洞的安全构建，不得回退到 Pages 旧版（D-013、D-014）。
 
-👉 "adminPwd" 后面的内容就是你的当前密码！ 看完记住它，直接回去登录就行了。
+## 本地开发（可选）
+
+本地不装 Wrangler 也能用上面的 Git 集成流程完成全部部署。若需本地调试：
+
+```bash
+npm exec wrangler dev
+```
+
+在本地 `.dev.vars`（已被 `.gitignore` 排除）写入 `SESSION_SECRET=本地开发用密钥`。本地 KV 使用 Wrangler 的本地模拟，首次需写入 `admin_auth` 键。
+
+## 三环境边界
+
+| 环境 | 用途 | 触发方式 | 部署 |
+| --- | --- | --- | --- |
+| dev | 日常开发与单元验证 | `git push origin dev` | 不自动部署生产 |
+| preview（PR） | 端到端验证与生产切换前演练 | 开 `dev → main` 的 PR | Cloudflare 自动生成 Preview URL |
+| production | 稳定生产 | 合并到 `main` | Git 集成自动部署 |
+
+`wrangler.jsonc` 中的 `env.preview` 命名环境供 CLI 手动演练使用（`npm exec wrangler deploy --env preview`）；Git 集成的 PR Preview 由平台自动创建，无需 CLI。
+
+分支策略：`dev` 为开发分支，`main` 为稳定分支，`main` 受保护只接受来自 `dev` 的已验证合并（D-014）。跨电脑接力以 Git 为可靠依据，远端名以各机 `git remote -v` 为准。
+
+## 安全说明
+
+- 公开配置 `site_config` 不含凭据；`GET /api/config` 只返回白名单字段。
+- 写接口校验同源（Origin/Referer）、字段白名单与 URL 格式；跨源写请求返回 403。
+- 会话为短期签名 HttpOnly Cookie（`SameSite=Strict`）；改密或吊销后 `sessionVersion` 递增使旧会话失效。受 KV 最终一致性影响，失效可能存在短暂延迟。
+- 版本冲突（`version`）仅作尽力而为提示，不保证原子性，不宣称“防止覆盖”。
+- 遗留 `/api/links` 已关闭（410）。
+
+## 测试
+
+```bash
+node --test tests/*.test.mjs
+```
+
+覆盖库级单元、Worker API 与安全回归、页面静态冒烟。浏览器交互回归清单见 [`tests/regression.md`](tests/regression.md)，需在有浏览器与真实 preview 环境的机器上执行。CI 配置见 `.github/workflows/ci.yml`，在 push/PR 到 `dev`、`main` 时运行上述 Node 检查，不安装任何依赖。
+
+## License
+
+MIT

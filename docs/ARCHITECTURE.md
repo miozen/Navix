@@ -1,6 +1,6 @@
 # 当前架构
 
-> 本文件记录**当前有效架构**，以仓库源码与配置为依据。用户部署教程见 [`../README.md`](../README.md)（仍描述迁移前的 Pages 流程，待 P3 更新）；已确认决策见 [`DECISIONS.md`](DECISIONS.md)；阶段计划见 [`CURRENT_PLAN.md`](CURRENT_PLAN.md)。
+> 本文件记录**当前有效架构**，以仓库源码与配置为依据。用户部署教程见 [`../README.md`](../README.md)（P3 已更新为 Workers 流程）；已确认决策见 [`DECISIONS.md`](DECISIONS.md)；阶段计划见 [`CURRENT_PLAN.md`](CURRENT_PLAN.md)。
 
 ## 1. 项目定位与技术栈
 
@@ -79,4 +79,4 @@
 - **构建**：无构建命令、无 `package.json`、无输出目录。
 - **本地/预览**：使用 Wrangler（尚未安装）；`SESSION_SECRET` 通过 secret 或本地开发变量注入。
 - **部署**：`main` 由 Workers Git 集成自动部署；`dev` 仅用于开发和 preview 验证。
-- 迁移前的 Pages 部署步骤仍见 `README.md:25-64`，生产切换前需更新。
+- 部署步骤见 `README.md`（P3 已更新为 Workers + Static Assets + KV 流程）。
