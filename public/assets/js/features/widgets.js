@@ -3,6 +3,6 @@ export {
     updateClockAndGreeting,
     fetchWeather,
     renderWeather,
-    updateBackToTop,
+    initBackToTop,
     scrollToTop
 } from '../app.js';

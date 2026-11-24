@@ -37,11 +37,13 @@
 - D-015 已获用户确认并实施：内置默认密码 `navix666` + 首次强制改密，替代 D-010 中"禁止公开初始密码"一条；D-010 其余原则保留。测试增至 36/36 通过。
 - D-016 已获用户确认并实施（站点的可视化设置）：站点标题、页脚文字、搜索引擎（名称/URL 模板 `{q}`/图标/默认引擎）纳入 `site_config` 并由右侧设置面板管理（仅管理员可见）；新增网址支持原地编辑（改为删除重建）；夜间模式链接标签/角标对比度修复；设置面板按「外观 / 站点 / 后台」归拢并可滚动。测试增至 40/40 通过。
 - **D-016 已通过 GitHub PR #1 合并到 `main`**（`2fddd3a Merge pull request #1 from miozen/dev`），Cloudflare Git 集成自动部署。
-- 本轮线上问题修复（待提交到 dev）：① 保存配置报「engines 格式无效」——前端未初始化时提交 `engines:null`，已做服务端容错（忽略 null 不覆盖）+ 前端 applySiteAppearance 写回有效数组 + 提交 body 过滤 null/undefined；② 根治「偶发保存/添加云端无响应、刷新才恢复」——`saveInProgress` 布尔锁改为串行 Promise 队列，并发保存依次执行且 body 构造移入 try、finally 必释放；③ 新增回到顶部按钮（滚动 >300px 显示、平滑滚动）；④ 页脚改为单击统一入口（未登录登录 / 已登录确认后退出）。测试 41/41 + 冒烟 5/5 通过。个性化设置按钮位置经用户确认保持右上角悬浮不变。
+- 线上问题修复第一批（已通过 PR #2 合并上线）：① 保存配置报「engines 格式无效」——前端未初始化时提交 `engines:null`，已做服务端容错（忽略 null 不覆盖）+ 前端 applySiteAppearance 写回有效数组 + 提交 body 过滤 null/undefined；② 根治「偶发保存/添加云端无响应、刷新才恢复」——`saveInProgress` 布尔锁改为串行 Promise 队列，并发保存依次执行且 body 构造移入 try、finally 必释放；③ 新增回到顶部按钮（初版滚动 >300px 显示）；④ 页脚改为单击统一入口（未登录登录 / 已登录确认后退出）。
+- **PR #2 已合并**：`8f634f7 Merge pull request #2 from miozen/dev`，第一批修复上线。
+- 线上问题修复第二批 UI/交互（待提交）：① 设置浮标与面板统一左上角、面板紧贴按钮下方（title 改「打开设置面板」）；② 回顶按钮改用 IntersectionObserver 观察 #hero-header，标题滚出视口才显示（替代固定 300px，解决链接少看不到按钮）；③ 链接标题一行完整显示——去掉固定 pr-12，仅管理员悬停卡片时让位给编辑/删除按钮（分区链接+友链，title 兜底）；④ 修复编辑按钮第二次点击失效——根因为把选择器依赖的 data-i18n 从 btnSave 改成 btnSaveEdit 导致第二次 querySelector 找不到而抛错，改固定 id=modal-save-btn；⑤ 登录/退出提示合并——去掉登录成功 alert 与页脚退出成功 alert（页脚已 confirm），logoutAdmin 加 silent 参数。测试 41/41 + 冒烟 5/5 通过。
 
 ## In Progress
 
-本轮 4 项修复已在 `dev` 工作区完成实现与本地测试（41/41 + 冒烟 5/5），待提交到 `dev` 并创建新的 `dev → main` PR 合并后由 Cloudflare 自动部署。合并方式必须走 GitHub PR，不直接推送 `main`（用户明确要求）。
+本轮 5 项 UI/交互改动已在 `dev` 工作区完成实现与本地测试（41/41 + 冒烟 5/5），待提交到 `dev` 并创建新的 `dev → main` PR 合并后由 Cloudflare 自动部署。合并方式必须走 GitHub PR，不直接推送 `main`（用户明确要求）。
 
 ## Remaining
 
@@ -100,7 +102,8 @@
 - P2 验证：HTML 已无内联 `<style>` / `<script>`；模块导入路径全部有效；55 个导出均有声明；16 个内联处理器均已挂载到 window（其中 `event` 为内联表达式保留字）；全部模块语法检查通过；15/15 测试通过。
 - P3 验证：`node --test` 33/33 通过（15 → 33，新增 18 项覆盖库边界、API 分支与页面静态冒烟）；全部 `.mjs` 语法检查通过；CI 工作流四步骤本地逐条复现通过（语法/测试/冒烟/凭据扫描）；明文凭据扫描清零；README 已移除 `admin888` 与公开配置读密码的说明。
 - D-016 验证：`node --check` 覆盖 `app.js`、`main.js`、`navigation.js`、`config.mjs`、`validation.mjs` 全部通过；`node --test` 40/40 通过（新增 4 项：站点标题/页脚/引擎合法配置、引擎缺 `{q}` 或非 http 被拒、重复/非法 id 与引擎数量边界、`normalizeUrl` 保留 `{q}`）；冒烟测试确认新增内联处理器已挂载到 window；初始化链路 `initCloudData → applySiteAppearance → renderEngineMenu` 已核对；站点设置改为一次原子写（patch 合并提交，避免三次请求与 version 三次递增）。
-- 本轮修复验证：`node --check` 覆盖 app.js/main.js/widgets.js/admin.js 通过；`node --test` 41/41（新增 engines:null 容错用例）、冒烟 5/5 通过；`git diff --check` 通过。
+- 第一批修复验证：`node --check` 覆盖 app.js/main.js/widgets.js/admin.js 通过；`node --test` 41/41（新增 engines:null 容错用例）、冒烟 5/5 通过；`git diff --check` 通过。
+- 第二批 UI/交互验证：`node --check` 覆盖 app.js/main.js/widgets.js 通过；`node --test` 41/41、冒烟 5/5 通过；`git diff --check` 通过；编辑按钮 bug 根因（data-i18n 选择器被改）已定位并修复。
 - 未执行：真实 Cloudflare preview 部署与 KV 端到端验证；浏览器交互回归需在有环境的机器上执行；GitHub Actions 云端首次运行需 push 后验证。
 
 ## Blockers
@@ -108,14 +111,14 @@
 - 无技术阻塞；P0 ～ P3、接力稳定、D-015 默认密码方案均已完成。
 - Cloudflare Git 集成已配置、生产部署成功；首次登录行为已通过线上验证（默认密码登录 + 自动引导改密，符合预期，2026-11-24 09:40）。
 - 待补验证：首次改密后新密码写入 KV 与默认密码失效的线上确认；`tests/regression.md` 浏览器交互回归；GitHub Actions 云端首次运行。
-- 安全生产基线 `main` = `2fddd3a`（PR #1 合并，含全部 D-016 改动，不含旧版公开密码漏洞）；后续只允许来自 `dev` 的已验证合并（D-013、D-014）。
+- 安全生产基线 `main` = `8f634f7`（PR #2 合并，含 D-016 + 第一批修复，不含旧版公开密码漏洞）；后续只允许来自 `dev` 的已验证合并（D-013、D-014）。
 - `.workbuddy-ai/` 已在 `.gitignore` 中排除，不应提交或删除。
 - 仓库根目录遗留旧版 `index.html` 含明文密码与旧 Token 逻辑（不在 `public/`、不被 Workers 发布）；是否删除待用户决定，已在 README 与 HANDOFF 标注为不得部署。
 
 ## Next Action
 
-1. 提交本轮 4 项修复到 `dev` 并推送；由用户在 GitHub 手动创建新的 `dev → main` PR 合并（禁止直接推送 main）。
-2. 合并后线上验证：保存配置不再报「engines 格式无效」、快速连续添加/编辑云端不再无响应、回到顶部按钮、页脚单击退出。
+1. 提交本轮 5 项 UI/交互改动到 `dev` 并推送；由用户在 GitHub 手动创建新的 `dev → main` PR 合并（禁止直接推送 main）。
+2. 合并后线上验证：设置面板左上角入口与面板同处、标题滚出后回顶按钮出现、链接标题一行完整且悬停出现编辑按钮、编辑按钮可连续多次使用、登录/退出仅一次提示。
 3. 用新密码重新登录，验证配置可保存、默认密码 `navix666` 已失效（D-015）。
 4. 按 `tests/regression.md` 完成浏览器交互回归（语言/主题/壁纸/分区/友链/后台）。
 5. 如需清理仓库根目录旧版 `index.html`，先取得用户确认（破坏性操作）。
