@@ -30,8 +30,10 @@
   - 仓库根目录旧版 `index.html`（非 `public/index.html`）仍含明文 `admin888` 与旧 Token 逻辑，不在公开目录、不影响 Workers 发布，但不得用于部署；是否删除待用户决定（删除属破坏性操作，未擅自执行）。
   - Git 集成已在 Cloudflare 后台配置完成，生产部署成功；后续 push 到 `main` 自动部署。
 - **Exact Next Action**：
-  1. 提交 D-016 到 `dev`（本地测试已 40/40 通过）。
-  2. 在 GitHub 创建 `dev → main` Pull Request 并合并——**禁止直接推送 `main`**（用户明确要求）。
+  1. D-016 已提交到 `dev` 并推送远端（`df3a858`）；本地测试 40/40 通过。
+  2. 用户在 GitHub 手动创建并合并 `dev → main` Pull Request（本环境无法自动创建：无 `gh`、凭据读取被安全策略拦截、浏览器自动化 daemon 无法启动、匿名 API 401）——**禁止直接推送 `main`**（用户明确要求）。
+     - PR 创建链接：https://github.com/miozen/Navix/compare/main...dev?expand=1
+     - 建议标题：`feat(settings): visual site config and search engines (D-016)`
   3. 合并后 Cloudflare Git 集成自动部署；到线上验证站点标题/页脚/引擎自定义/网址编辑/夜间标签对比度。
   4. 补做首次改密后线上验证与 `tests/regression.md` 浏览器回归；如需清理根目录旧版 `index.html` 请先确认。
 - **Cross-machine Ready**：`YES`（以 `origin/dev` 或 `origin/main` 为接力点）
