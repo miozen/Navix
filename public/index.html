@@ -158,7 +158,7 @@
 
     <!-- 弹窗模态框 -->
     <div id="modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-[300]" onclick="closeModalOnBlank(event)">
-        <div class="bg-slate-900 border border-slate-700/80 p-6 rounded-2xl w-full max-w-sm shadow-2xl text-slate-100" onclick="event.stopPropagation()">
+        <form class="bg-slate-900 border border-slate-700/80 p-6 rounded-2xl w-full max-w-sm shadow-2xl text-slate-100" onclick="event.stopPropagation()" onsubmit="event.preventDefault(); saveActiveLink();">
             <h4 id="modal-title" class="text-md font-semibold text-slate-200 mb-4 flex items-center"><i class="fas fa-link mr-2 text-indigo-400"></i><span id="modal-title-text">添加网址</span></h4>
             <div class="space-y-4 mb-6">
                 <div>
@@ -172,15 +172,14 @@
             </div>
             <div class="flex justify-end space-x-3">
                 <button type="button" onclick="toggleModal(false)" class="px-4 py-2 bg-slate-800 text-slate-400 text-xs font-medium rounded-xl hover:bg-slate-700 transition-colors cursor-pointer" data-i18n="btnCancel">取消</button>
-                <button type="button" id="modal-save-btn" onclick="saveActiveLink()" class="px-4 py-2 bg-indigo-600 text-white text-xs font-medium rounded-xl hover:bg-indigo-500 transition-colors cursor-pointer shadow-lg shadow-indigo-600/20" data-i18n="btnSave">保存站点</button>
+                <button type="submit" id="modal-save-btn" class="px-4 py-2 bg-indigo-600 text-white text-xs font-medium rounded-xl hover:bg-indigo-500 transition-colors cursor-pointer shadow-lg shadow-indigo-600/20" data-i18n="btnSave">保存站点</button>
             </div>
-        </div>
+        </form>
     </div>
 
     <!-- 回到顶部按钮（滚动到一定距离后显示） -->
     <button id="back-to-top" aria-label="回到顶部" onclick="scrollToTop()" title="回到顶部 / Back to Top"
-        class="back-to-top fixed bottom-6 right-6 z-[140] w-11 h-11 rounded-full glass-card text-slate-300 hover:text-indigo-400 hover:scale-110 active:scale-95 transition-all duration-300 shadow-xl flex items-center justify-center opacity-0 pointer-events-none"
-        style="visibility: hidden;">
+        class="back-to-top fixed bottom-6 right-6 z-[140] w-11 h-11 rounded-full glass-card text-slate-300 hover:text-indigo-400 hover:scale-110 active:scale-95 transition-all duration-300 shadow-xl flex items-center justify-center pointer-events-none">
         <i class="fas fa-arrow-up text-sm"></i>
     </button>
 

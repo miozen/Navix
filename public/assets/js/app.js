@@ -1,8 +1,10 @@
 // 原始应用逻辑：按能力拆分的模块入口从这里导出。
 
         // --- 0. 全局动态星空渲染 (Canvas) ---
+        let starfieldAnimationId = null;
         function initStarfield() {
             const canvas = document.getElementById('starfield');
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
             let w = canvas.width = window.innerWidth;
             let h = canvas.height = window.innerHeight;
@@ -19,6 +21,11 @@
             }
 
             function draw() {
+                // 自定义壁纸激活时暂停循环，节省系统资源
+                if (document.body.classList.contains('has-custom-bg')) {
+                    starfieldAnimationId = null;
+                    return;
+                }
                 ctx.clearRect(0, 0, w, h);
                 const isLight = document.body.classList.contains('theme-light');
                 ctx.fillStyle = isLight ? 'rgba(15, 23, 42, 0.3)' : 'rgba(255, 255, 255, 0.6)';
@@ -35,8 +42,13 @@
                     if (star.y < 0) star.y = h;
                     if (star.y > h) star.y = 0;
                 });
-                requestAnimationFrame(draw);
+                starfieldAnimationId = requestAnimationFrame(draw);
             }
+            window.resumeStarfield = function() {
+                if (!starfieldAnimationId && !document.body.classList.contains('has-custom-bg')) {
+                    starfieldAnimationId = requestAnimationFrame(draw);
+                }
+            };
             draw();
 
             window.addEventListener('resize', () => {
@@ -45,6 +57,16 @@
             });
         }
         initStarfield();
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
 
         // --- 1. 全局状态与多语言 ---
         let currentLang = localStorage.getItem('nav_lang') || 'zh';
@@ -275,8 +297,8 @@
                 localStorage.removeItem('nav_must_change_pwd');
                 checkAdminSession();
                 alert(currentLang === 'zh'
-                    ? '密码已设置，请双击页脚用新密码重新登录。'
-                    : 'Password set. Please double-click the footer to log in again with the new password.');
+                    ? '密码已设置，请单击页脚用新密码重新登录。'
+                    : 'Password set. Please click the footer to log in again with the new password.');
             } catch (e) {
                 console.error('修改密码失败', e);
                 alert(currentLang === 'zh' ? '修改密码失败，无法连接服务器！' : 'Password update failed. Server unavailable.');
@@ -391,7 +413,8 @@
                 console.warn("未能连接云端 API，使用本地缓存", e);
             }
 
-            if (!cloudConfig.dynamicSections || cloudConfig.dynamicSections.length === 0) {
+            const hasInitSections = localStorage.getItem('nav_sections_init') === 'true' || cloudConfig.version > 0;
+            if (!hasInitSections && (!cloudConfig.dynamicSections || cloudConfig.dynamicSections.length === 0)) {
                 cloudConfig.dynamicSections = [
                     { id: "sec_rec", title: t('defRec'), links: [] },
                     { id: "sec_dev", title: t('defDev'), links: [] },
@@ -399,6 +422,7 @@
                 ];
                 localStorage.setItem('nav_dynamic_sections', JSON.stringify(cloudConfig.dynamicSections));
             }
+            localStorage.setItem('nav_sections_init', 'true');
 
             if (savedBg && !document.body.classList.contains('bg-cleared')) {
                 applyWallpaperStyles(savedBg);
@@ -478,6 +502,13 @@
                             setSaveState('failed', currentLang === 'zh' ? '会话已失效，请重新登录' : 'Session expired');
                             await logoutAdmin();
                         } else if (res.status === 409) {
+                            if (typeof data.currentVersion === 'number') {
+                                cloudConfig.version = data.currentVersion;
+                            }
+                            if (data.config && typeof data.config === 'object') {
+                                Object.assign(cloudConfig, data.config);
+                                cloudConfig.version = data.currentVersion;
+                            }
                             setSaveState('failed', data.message || '配置可能已被其他设备更新，请刷新确认');
                             alert(data.message || '配置可能已被其他设备更新，请刷新确认');
                         } else {
@@ -510,25 +541,24 @@
         function toggleThemeMenu(e) { e.stopPropagation(); document.getElementById('theme-panel').classList.toggle('hidden'); }
         function setBaseTheme(themeName) { document.body.classList.remove('theme-light', 'theme-dark'); document.body.classList.add(themeName); localStorage.setItem('nav_theme_mode', themeName); document.getElementById('theme-panel').classList.add('hidden'); }
 
-        // 回到顶部：顶部标题区滚出视口时显示按钮，滚回可见时隐藏。
-        // 用 IntersectionObserver 而非固定像素阈值，链接多少都能正确触发。
+        // 回到顶部：滚动超过阈值（160px）显示按钮，滚回顶部平滑隐藏。
+        // 采用 requestAnimationFrame 节流监听，兼顾各屏幕分辨率与内容长度。
         function initBackToTop() {
             const btn = document.getElementById('back-to-top');
-            const hero = document.getElementById('hero-header');
-            if (!btn || !hero) return;
-            const show = (visible) => btn.classList.toggle('is-visible', visible);
-            if (typeof IntersectionObserver === 'undefined') {
-                // 降级：老浏览器用滚动位置兜底
-                const onScroll = () => show(window.scrollY > hero.offsetHeight);
-                window.addEventListener('scroll', onScroll, { passive: true });
-                onScroll();
-                return;
-            }
-            const observer = new IntersectionObserver((entries) => {
-                // hero 不再与视口相交（已滚出顶部）时显示回顶按钮
-                show(!entries[0].isIntersecting && entries[0].boundingClientRect.bottom < 0);
-            }, { threshold: 0 });
-            observer.observe(hero);
+            if (!btn) return;
+            let ticking = false;
+            const updateVisibility = () => {
+                const visible = (window.scrollY || document.documentElement.scrollTop || 0) > 160;
+                btn.classList.toggle('is-visible', visible);
+                ticking = false;
+            };
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    window.requestAnimationFrame(updateVisibility);
+                    ticking = true;
+                }
+            }, { passive: true });
+            updateVisibility();
         }
         function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -565,13 +595,14 @@
             document.getElementById('theme-panel').classList.add('hidden');
             await updateCloudConfig('wallpaper', "");
             document.getElementById('starfield').style.opacity = '1';
+            if (window.resumeStarfield) window.resumeStarfield();
         }
 
         // --- 5. 动态自定义区域管理 ---
         async function saveDynamicSections(sections) {
             localStorage.setItem('nav_dynamic_sections', JSON.stringify(sections));
             renderDynamicSections();
-            await updateCloudConfig('dynamicSections', sections);
+            return await updateCloudConfig('dynamicSections', sections);
         }
 
         function addCustomSection() {
@@ -635,15 +666,18 @@
 
                     visibleLinks.forEach((link, idx) => {
                         const displayName = link.name;
-                        const letterHtml = `<div class="link-letter ${iconSizeClass} rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold shrink-0">${displayName.charAt(0).toUpperCase()}</div>`;
+                        const safeName = escapeHtml(displayName);
+                        const safeUrl = escapeHtml(link.url);
+                        const firstChar = escapeHtml((displayName.charAt(0) || '?').toUpperCase());
+                        const letterHtml = `<div class="link-letter ${iconSizeClass} rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold shrink-0">${firstChar}</div>`;
                         let iconHtml = letterHtml;
 
                         try {
                             if (link.url) {
                                 const hostname = new URL(link.url).hostname;
                                 iconHtml = `
-                                    <img src="https://unavatar.io/duckduckgo/${hostname}" draggable="false" class="${imgSizeClass} rounded object-contain shrink-0" alt="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                                    <div style="display:none;" class="link-letter ${iconSizeClass} rounded-full bg-indigo-500/20 text-indigo-400 items-center justify-center font-bold shrink-0">${displayName.charAt(0).toUpperCase()}</div>
+                                    <img src="https://unavatar.io/duckduckgo/${encodeURIComponent(hostname)}" loading="lazy" draggable="false" class="${imgSizeClass} rounded object-contain shrink-0" alt="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                    <div style="display:none;" class="link-letter ${iconSizeClass} rounded-full bg-indigo-500/20 text-indigo-400 items-center justify-center font-bold shrink-0">${firstChar}</div>
                                 `;
                             }
                         } catch (e) {}
@@ -657,8 +691,8 @@
                              ondrop="handleDrop(event, 'link', '${sec.id}', ${idx})">
                             <div class="flex items-center w-full overflow-hidden">
                                 <i class="fas fa-grip-vertical text-slate-500 opacity-0 group-hover:opacity-50 transition-opacity ${dragMrClass} cursor-move admin-only text-[10px] shrink-0"></i>
-                                <a href="${link.url}" draggable="false" target="_blank" rel="noopener noreferrer" title="${displayName}" class="link-title flex items-center ${spaceXClass} w-full pr-1">
-                                    ${iconHtml} <span class="section-link-label ${textSizeClass} font-medium truncate">${displayName}</span>
+                                <a href="${safeUrl}" draggable="false" target="_blank" rel="noopener noreferrer" title="${safeName}" class="link-title flex items-center ${spaceXClass} w-full pr-1">
+                                    ${iconHtml} <span class="section-link-label ${textSizeClass} font-medium truncate">${safeName}</span>
                                 </a>
                             </div>
                             <div class="admin-only link-actions absolute right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
@@ -673,7 +707,7 @@
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-semibold text-indigo-400 flex items-center cursor-move" title="长按拖拽排序" style="cursor: grab;">
                             <i class="fas fa-grip-vertical mr-2 text-slate-500 opacity-60 admin-only text-sm"></i>
-                            <i class="fas fa-layer-group mr-2.5"></i> <span>${sec.title}</span>
+                            <i class="fas fa-layer-group mr-2.5"></i> <span>${escapeHtml(sec.title)}</span>
                         </h3>
                         <div class="flex gap-1.5 shrink-0 ml-2">
                             <button type="button" onclick="openLinkModal('section_${sec.id}')" class="admin-only text-[10px] px-2 py-1 bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 rounded-md hover:bg-indigo-600/40 transition-colors cursor-pointer z-[50]">${t('addCloud')}</button>
@@ -690,14 +724,21 @@
             checkAdminSession();
         }
 
-        function deleteSectionLink(e, secId, linkIdx) {
+        async function deleteSectionLink(e, secId, linkIdx) {
             e.preventDefault();
             e.stopPropagation();
+            if (!confirm(t('delConfirm'))) return;
             let secs = cloudConfig.dynamicSections || [];
             const sec = secs.find(s => s.id === secId);
             if (sec) {
+                const prevSecs = JSON.stringify(secs);
                 sec.links.splice(linkIdx, 1);
-                saveDynamicSections(secs);
+                const ok = await saveDynamicSections(secs);
+                if (ok === false) {
+                    cloudConfig.dynamicSections = JSON.parse(prevSecs);
+                    localStorage.setItem('nav_dynamic_sections', prevSecs);
+                    renderDynamicSections();
+                }
             }
         }
 
@@ -758,11 +799,41 @@
 
         async function fetchWeather() {
             try {
-                const ipRes = await fetch('https://ipapi.co/json/');
-                if (!ipRes.ok) throw new Error("Location API rate limited or failed.");
+                let latitude, longitude, city;
+                const cachedLoc = localStorage.getItem('nav_weather_loc');
+                const cachedTime = Number(localStorage.getItem('nav_weather_time') || 0);
+                const isLocFresh = cachedLoc && (Date.now() - cachedTime < 24 * 60 * 60 * 1000);
 
-                const ipData = await ipRes.json();
-                const { latitude, longitude, city } = ipData;
+                if (isLocFresh) {
+                    try {
+                        const parsed = JSON.parse(cachedLoc);
+                        latitude = parsed.lat;
+                        longitude = parsed.lon;
+                        city = parsed.city;
+                    } catch (e) {}
+                }
+
+                if (!latitude || !longitude) {
+                    const ipRes = await fetch('https://ipapi.co/json/');
+                    if (ipRes.ok) {
+                        const ipData = await ipRes.json();
+                        latitude = ipData.latitude;
+                        longitude = ipData.longitude;
+                        city = ipData.city;
+                        if (latitude && longitude) {
+                            localStorage.setItem('nav_weather_loc', JSON.stringify({ lat: latitude, lon: longitude, city }));
+                            localStorage.setItem('nav_weather_time', String(Date.now()));
+                        }
+                    } else if (cachedLoc) {
+                        const parsed = JSON.parse(cachedLoc);
+                        latitude = parsed.lat;
+                        longitude = parsed.lon;
+                        city = parsed.city;
+                    } else {
+                        throw new Error("Location API rate limited or failed.");
+                    }
+                }
+
                 if (!latitude || !longitude) throw new Error("Missing coordinates.");
 
                 const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
@@ -831,7 +902,7 @@
             const menu = document.getElementById('engine-menu');
             if (!menu) return;
             menu.innerHTML = getEngineList().map(e =>
-                `<button type="button" onclick="selectEngine('${e.id}')" class="w-full text-left px-4 py-2.5 hover:bg-indigo-600/20 text-sm flex items-center space-x-2 cursor-pointer"><i class="${e.icon || 'fas fa-globe text-slate-400'}"></i> <span>${e.name}</span></button>`
+                `<button type="button" onclick="selectEngine('${escapeHtml(e.id)}')" class="w-full text-left px-4 py-2.5 hover:bg-indigo-600/20 text-sm flex items-center space-x-2 cursor-pointer"><i class="${escapeHtml(e.icon) || 'fas fa-globe text-slate-400'}"></i> <span>${escapeHtml(e.name)}</span></button>`
             ).join('');
         }
 
@@ -871,12 +942,12 @@
             list.innerHTML = (enginesDraft || []).map((e, i) => `
                 <div class="engine-row border border-slate-700 rounded-lg p-2 space-y-1.5" data-idx="${i}">
                     <div class="flex gap-1.5">
-                        <input type="text" class="engine-name w-1/3 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-slate-100" value="${e.name.replace(/"/g, '&quot;')}" placeholder="名称">
-                        <input type="text" class="engine-url flex-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-slate-100" value="${e.url.replace(/"/g, '&quot;')}" placeholder="https://...q={q}">
+                        <input type="text" class="engine-name w-1/3 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-slate-100" value="${escapeHtml(e.name)}" placeholder="名称">
+                        <input type="text" class="engine-url flex-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-slate-100" value="${escapeHtml(e.url)}" placeholder="https://...q={q}">
                         <button type="button" onclick="removeEngine(${i})" class="text-red-400 hover:text-red-300 px-1 cursor-pointer" title="删除">×</button>
                     </div>
                     <div class="flex items-center gap-1.5">
-                        <input type="text" class="engine-icon flex-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-[10px] text-slate-100" value="${(e.icon || '').replace(/"/g, '&quot;')}" placeholder="图标 class（可选）">
+                        <input type="text" class="engine-icon flex-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-[10px] text-slate-100" value="${escapeHtml(e.icon || '')}" placeholder="图标 class（可选）">
                         <button type="button" onclick="setDefaultEngine(${i})" class="text-[10px] px-1.5 py-1 rounded ${e.id === enginesDefaultId ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'} cursor-pointer">${e.id === enginesDefaultId ? '默认' : '设为默认'}</button>
                     </div>
                 </div>`).join('');
@@ -1011,9 +1082,10 @@
             }
 
             const edit = editingTarget;
-            // 保存友情链接时，更新云端状态池并同步（新增 push / 编辑 splice 替换）
+            // 保存友情链接时，更新云端状态池并同步（新增 push / 编辑 splice 替换，失败则回滚）
             if (currentModalTarget === 'friend') {
                 let links = cloudConfig.friendLinks || [];
+                const prevLinks = JSON.stringify(links);
                 if (edit && edit.type === 'friend') {
                     links.splice(edit.idx, 1, { name, url });
                 } else {
@@ -1022,10 +1094,17 @@
                 cloudConfig.friendLinks = links;
                 localStorage.setItem('nav_friend_links', JSON.stringify(links));
                 loadFriendLinks();
-                await updateCloudConfig('friendLinks', links);
+                toggleModal(false);
+                const ok = await updateCloudConfig('friendLinks', links);
+                if (ok === false) {
+                    cloudConfig.friendLinks = JSON.parse(prevLinks);
+                    localStorage.setItem('nav_friend_links', prevLinks);
+                    loadFriendLinks();
+                }
             } else if (currentModalTarget.startsWith('section_')) {
                 const secId = currentModalTarget.replace('section_', '');
                 let secs = cloudConfig.dynamicSections || [];
+                const prevSecs = JSON.stringify(secs);
                 const sec = secs.find(s => s.id === secId);
                 if (sec) {
                     if (edit && edit.type === 'section') {
@@ -1033,13 +1112,22 @@
                     } else {
                         sec.links.push({ name, url });
                     }
-                    await saveDynamicSections(secs);
+                    toggleModal(false);
+                    const ok = await saveDynamicSections(secs);
+                    if (ok === false) {
+                        cloudConfig.dynamicSections = JSON.parse(prevSecs);
+                        localStorage.setItem('nav_dynamic_sections', prevSecs);
+                        renderDynamicSections();
+                    }
+                } else {
+                    toggleModal(false);
                 }
+            } else {
+                toggleModal(false);
             }
-            toggleModal(false);
         }
 
-        // 【关键更新】渲染友情链接时优先使用云端状态池的数据
+        // 【关键更新】渲染友情链接时优先使用云端状态池的数据（XSS 转义保护）
         function loadFriendLinks() {
             const container = document.getElementById('friend-links-container');
             let links = cloudConfig.friendLinks || [];
@@ -1051,9 +1139,11 @@
             }
 
             links.forEach((item, index) => {
+                const safeName = escapeHtml(item.name);
+                const safeUrl = escapeHtml(item.url);
                 container.innerHTML += `
                     <div class="link-card group relative flex items-center justify-between p-2.5 bg-slate-500/5 border border-slate-500/10 rounded-xl hover:bg-emerald-600/10 transition-all text-center">
-                        <a href="${item.url}" draggable="false" target="_blank" rel="noopener noreferrer" title="${item.name}" class="link-title friend-link-label w-full text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors truncate px-2">${item.name}</a>
+                        <a href="${safeUrl}" draggable="false" target="_blank" rel="noopener noreferrer" title="${safeName}" class="link-title friend-link-label w-full text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors truncate px-2">${safeName}</a>
                         <div class="admin-only link-actions absolute right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button type="button" onclick="openEditLinkModal('friend', null, ${index})" class="text-[10px] text-slate-400 hover:text-sky-400 bg-slate-500/10 px-1 rounded cursor-pointer" title="编辑"><i class="fas fa-pen"></i></button>
                             <button type="button" onclick="deleteFriendLink(event, ${index})" class="text-[10px] text-slate-500 hover:text-red-400 bg-slate-500/10 px-1 rounded cursor-pointer" title="删除"><i class="fas fa-times"></i></button>
@@ -1062,16 +1152,23 @@
             });
         }
 
-        // 【关键更新】删除友情链接时，更新云端状态池并同步
+        // 【关键更新】删除友情链接时，二次确认、更新云端状态池并同步（失败回滚）
         async function deleteFriendLink(e, index) {
             e.preventDefault(); e.stopPropagation();
+            if (!confirm(t('delConfirm'))) return;
             let links = cloudConfig.friendLinks || [];
             if (links.length > 0) {
+                const prevLinks = JSON.stringify(links);
                 links.splice(index, 1);
                 cloudConfig.friendLinks = links;
                 localStorage.setItem('nav_friend_links', JSON.stringify(links));
                 loadFriendLinks();
-                await updateCloudConfig('friendLinks', links);
+                const ok = await updateCloudConfig('friendLinks', links);
+                if (ok === false) {
+                    cloudConfig.friendLinks = JSON.parse(prevLinks);
+                    localStorage.setItem('nav_friend_links', prevLinks);
+                    loadFriendLinks();
+                }
             }
         }
 
@@ -1092,6 +1189,7 @@ export {
     dragType,
     dragSecId,
     dragLinkIdx,
+    escapeHtml,
     initStarfield,
     t,
     setLanguage,
