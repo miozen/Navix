@@ -2,17 +2,17 @@
 
 > 仅保存恢复开发所需的最小状态。架构见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，决策见 [`DECISIONS.md`](DECISIONS.md)，阶段计划见 [`CURRENT_PLAN.md`](CURRENT_PLAN.md)。
 
-- **Last Updated**：2026-11-24 20:35 GMT+8
+- **Last Updated**：2026-11-24 21:20 GMT+8
 - **Current Branch**：`dev`
 - **Remote**：远端名以各机 `git remote -v` 为准；本机为 `origin`、部分机器为 `navix`，均指向 `https://github.com/miozen/Navix.git`
-- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；`dev` 本地 HEAD 为 `3c3e9ee`。`main` 远端为 `365d0a1`（Merge PR #3）
-- **Local vs Remote**：`origin/dev` = `3c3e9ee`；`origin/main` = `365d0a1`（PR #1、#2、#3 均已合并上线）。`dev` 已推送远端，待创建 PR #4 合并到 main
+- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；`dev` 本地 HEAD 为 `c018415`。`main` 远端为 `365d0a1`（Merge PR #3）
+- **Local vs Remote**：`origin/dev` = `c018415`；`origin/main` = `365d0a1`（PR #1、#2、#3 均已合并上线）。`dev` 包含本轮加固提交（3c3e9ee + c018415），待创建 PR #4 合并到 main
 - **Working Tree**：工作区干净
 - **Current Phase**：P0 ～ P3 全部完成；PR #1、#2、#3 均已合并上线；本轮缺陷修复与稳定性加固已推送到 dev
-- **Current Task**：用户在 GitHub 创建并合并新的 `dev → main` PR（PR #4）后自动部署上线
+- **Current Task**：用户在 GitHub 创建并合并新的 `dev → main` PR（PR #4）后自动部署上线，并决定后续 6 项债务任务排期
 - **Last Completed**：
   - PR #1、#2、#3 均已成功合并上线。
-  - 本轮全面审查缺陷修复与稳定性加固已提交并推送至 `dev`（`3c3e9ee`）：
+  - 本轮全面审查缺陷修复与稳定性加固已提交并推送至 `dev`（`3c3e9ee`、`c018415`）：
     1. 回到顶部按钮彻底根治：清除 HTML 行内 `style="visibility: hidden;"` 与 `opacity-0` 冲突样式；CSS 规范 `.back-to-top` 默认隐藏及 `.is-visible` 渐变展示态；JS 改为 `window.scrollY > 160` + `requestAnimationFrame` 节流更新，各分辨率与不同内容高度均能平滑稳定出现/回顶。
     2. XSS 漏洞修复：封装 `escapeHtml` 工具函数，对动态拼入 DOM 的书签标题/URL、分区名称、友链名称/URL、搜索引擎名称/URL/草稿进行完整转义；图标加 `loading="lazy"`。
     3. 防误删二次确认：`deleteSectionLink` 与 `deleteFriendLink` 激活 `confirm(t('delConfirm'))`。
@@ -39,11 +39,17 @@
   - 仓库根目录旧版 `index.html`（非 `public/index.html`）仍含明文 `admin888` 与旧 Token 逻辑，不在公开目录、不影响 Workers 发布，但不得用于部署；是否删除待用户决定（删除属破坏性操作，未擅自执行）。
   - Git 集成已在 Cloudflare 后台配置完成，生产部署成功；后续 push 到 `main` 自动部署。
 - **Exact Next Action**：
-  1. 提交本轮缺陷修复与稳定性加固改动到 `dev` 并推送；本地测试 41/41 + 冒烟 5/5 通过。
-  2. 用户在 GitHub 手动创建并合并新的 `dev → main` Pull Request（本环境无法自动创建：无 `gh`、凭据读取被安全策略拦截、浏览器自动化 daemon 无法启动、匿名 API 401）——**禁止直接推送 `main`**（用户明确要求）。
+  1. 用户在 GitHub 手动创建并合并新的 `dev → main` Pull Request（PR #4）：
      - PR 创建链接：https://github.com/miozen/Navix/compare/main...dev?expand=1
      - 建议标题：`fix: back-to-top button, XSS protection, delete confirm, 409 recovery and stability enhancements`
-  3. 合并后 Cloudflare Git 集成自动部署；到线上验证回到顶部按钮及各项交互。
+  2. 合并后 Cloudflare Git 集成自动部署；在线验证回到顶部按钮（滚动 >160px）、弹窗 Enter 提交、删除二次确认、XSS 过滤与天气缓存。
+  3. 待确认排期任务：
+     - ① 确认后删除仓库根目录废弃旧版 `index.html`（`git rm index.html`）；
+     - ② 补充 `public/favicon.ico` 消除 404 回退；
+     - ③ 加宽桌面端设置面板（从 256px 扩展到 ~340px）；
+     - ④ 修改密码输入旧密码改为带遮罩模态框；
+     - ⑤ 增加会话有效性主动探活；
+     - ⑥ 将 `app.js` 巨石代码真正下沉模块化到 `core/` 和 `features/`。
 - **Cross-machine Ready**：`YES`（以 `origin/dev` 或 `origin/main` 为接力点）
 
 ## 稳定恢复清单
