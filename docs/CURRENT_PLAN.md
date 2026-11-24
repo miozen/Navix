@@ -100,16 +100,18 @@
 
 ## Blockers
 
-- 无技术阻塞；P0 ～ P3 与接力稳定均已完成。
-- Cloudflare 端到端验证尚未执行；需在后台连接 Git 并配置 `SESSION_SECRET` 后完成。管理员密码用内置默认值 `navix666`，首次登录在网站内改密即写入 KV（D-015），无需手动写 KV。
-- 安全生产基线 `main` 已从当前安全代码建立并推送（不含旧版公开密码漏洞）；后续只允许来自 `dev` 的已验证合并（D-013、D-014）。
+- 无技术阻塞；P0 ～ P3、接力稳定、D-015 默认密码方案均已完成。
+- Cloudflare Git 集成已配置、生产部署成功；首次登录行为已通过线上验证（默认密码登录 + 自动引导改密，符合预期，2026-11-24 09:40）。
+- 待补验证：首次改密后新密码写入 KV 与默认密码失效的线上确认；`tests/regression.md` 浏览器交互回归；GitHub Actions 云端首次运行。
+- 安全生产基线 `main` = `04e89f0`（不含旧版公开密码漏洞）；后续只允许来自 `dev` 的已验证合并（D-013、D-014）。
 - `.workbuddy-ai/` 已在 `.gitignore` 中排除，不应提交或删除。
 - 仓库根目录遗留旧版 `index.html` 含明文密码与旧 Token 逻辑（不在 `public/`、不被 Workers 发布）；是否删除待用户决定，已在 README 与 HANDOFF 标注为不得部署。
 
 ## Next Action
 
-部署方案已确定为 Cloudflare Workers Git 集成（零本地配置），两件待办按顺序：
-1. Cloudflare 后台一次性配置：连接 `Navix` GitHub 仓库（生产分支 `main`、无构建命令）、添加 `SESSION_SECRET` Secret（详见 README）。KV ID 已写入配置。
-2. 开 `dev → main` PR 获取 Preview URL，执行 `tests/regression.md` 端到端验证：用默认密码 `navix666` 登录 → 首次强制改密 → 验证配置可保存；通过后合并 `main` 触发生产部署（D-013、D-014、D-015）。
+无阻塞性下一步。生产已上线并验证首次登录符合预期。建议补做：
+1. 用新密码重新登录，验证配置可保存、默认密码 `navix666` 已失效（D-015）。
+2. 按 `tests/regression.md` 完成浏览器交互回归（语言/主题/壁纸/分区/友链/后台）。
+3. 如需清理仓库根目录旧版 `index.html`，先取得用户确认（破坏性操作）。
 
 常规开发阶段已全部完成；除非用户提出新需求，否则不再进入新的 Phase。
