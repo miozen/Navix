@@ -2,7 +2,7 @@
 
 > 仅保存恢复开发所需的最小状态。架构见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，决策见 [`DECISIONS.md`](DECISIONS.md)，阶段计划见 [`CURRENT_PLAN.md`](CURRENT_PLAN.md)。
 
-- **Last Updated**：2026-11-24 02:38 GMT+8
+- **Last Updated**：2026-11-24 11:08 GMT+8
 - **Current Branch**：`dev`
 - **Remote**：远端名以各机 `git remote -v` 为准；本机为 `origin`、部分机器为 `navix`，均指向 `https://github.com/miozen/Navix.git`。`dev` 与 `main` 均已推送
 - **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；基线为 `cc537ff`（docs: record production deploy success and first-login verification）。D-016 改动已在工作区，尚未提交
