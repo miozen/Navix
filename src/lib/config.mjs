@@ -1,4 +1,7 @@
-const PUBLIC_KEYS = ['wallpaper', 'dynamicSections', 'friendLinks', 'version', 'updatedAt'];
+const PUBLIC_KEYS = [
+  'wallpaper', 'dynamicSections', 'friendLinks', 'version', 'updatedAt',
+  'siteTitle', 'footerText', 'engines'
+];
 
 // 内置默认管理员凭据（D-015）：KV 未写入 admin_auth 时生效，首次登录后必须改密。
 // 密码明文 navix666 是公开的初始钥匙；哈希只用于校验，改密后写入 KV 即失效。

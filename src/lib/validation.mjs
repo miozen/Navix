@@ -1,4 +1,7 @@
-const ALLOWED_KEYS = new Set(['wallpaper', 'dynamicSections', 'friendLinks', 'version', 'updatedAt']);
+const ALLOWED_KEYS = new Set([
+  'wallpaper', 'dynamicSections', 'friendLinks', 'version', 'updatedAt',
+  'siteTitle', 'footerText', 'engines'
+]);
 
 function validateString(value, label, maxLength, allowEmpty = true) {
   if (typeof value !== 'string') return { error: `${label} 必须是字符串` };
@@ -96,6 +99,43 @@ export function sanitizeConfig(input) {
     const result = validateString(input.updatedAt, 'updatedAt', 40);
     if (result.error) return result;
     value.updatedAt = result.value;
+  }
+
+  if ('siteTitle' in input) {
+    const result = validateString(input.siteTitle, 'siteTitle', 120);
+    if (result.error) return result;
+    value.siteTitle = result.value;
+  }
+
+  if ('footerText' in input) {
+    const result = validateString(input.footerText, 'footerText', 300);
+    if (result.error) return result;
+    value.footerText = result.value;
+  }
+
+  if ('engines' in input) {
+    if (!Array.isArray(input.engines) || input.engines.length < 1 || input.engines.length > 12) {
+      return { error: 'engines 格式无效' };
+    }
+    const engines = [];
+    const seen = new Set();
+    for (let i = 0; i < input.engines.length; i += 1) {
+      const entry = input.engines[i];
+      const label = `engines[${i}]`;
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return { error: `${label} 格式无效` };
+      const id = validateString(entry.id, `${label}.id`, 40, false);
+      if (id.error) return id;
+      if (!/^[a-z0-9_-]+$/i.test(id.value)) return { error: `${label}.id 只能包含字母数字下划线和连字符` };
+      if (seen.has(id.value)) return { error: `${label}.id 重复` };
+      seen.add(id.value);
+      const name = validateString(entry.name, `${label}.name`, 60, false);
+      if (name.error) return name;
+      const url = normalizeUrl(entry.url);
+      if (!url || !url.includes('{q}')) return { error: `${label}.url 必须是含 {q} 占位符的 http(s) 网址` };
+      const icon = entry.icon ? validateString(entry.icon, `${label}.icon`, 120).value : '';
+      engines.push({ id: id.value, name: name.value, url, icon: icon || '' });
+    }
+    value.engines = engines;
   }
 
   return { value };

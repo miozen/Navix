@@ -35,10 +35,11 @@
 - P3 工程化已完成：测试扩充至 33/33 通过（新增页面静态冒烟与多项 API/边界用例）；新增 `.github/workflows/ci.yml` 零依赖 CI；`wrangler.jsonc` 增补三环境边界注释；README 已由 Pages 旧教程重写为 Workers 部署教程并移除明文密码。
 - 生产 KV ID 已写入 `wrangler.jsonc`（`e20a2207b12549a7abe68eb7ce272b24`，Cloudflare 惯例，ID 非凭据）。
 - D-015 已获用户确认并实施：内置默认密码 `navix666` + 首次强制改密，替代 D-010 中"禁止公开初始密码"一条；D-010 其余原则保留。测试增至 36/36 通过。
+- D-016 已获用户确认并实施（站点的可视化设置）：站点标题、页脚文字、搜索引擎（名称/URL 模板 `{q}`/图标/默认引擎）纳入 `site_config` 并由右侧设置面板管理（仅管理员可见）；新增网址支持原地编辑（改为删除重建）；夜间模式链接标签/角标对比度修复；设置面板按「外观 / 站点 / 后台」归拢并可滚动。测试增至 40/40 通过。
 
 ## In Progress
 
-无。P0 ～ P3 与接力稳定均已完成。生产域名未切换，旧 `main` 未推送；剩余工作为需外部环境的真实 preview 验证与生产切换（见 Next Action）。
+D-016 已在 `dev` 分支完成实现与本地测试（40/40），待创建 `dev → main` PR 合并后由 Cloudflare 自动部署。合并方式必须走 GitHub PR，不直接推送 `main`（用户明确要求）。
 
 ## Remaining
 
@@ -96,6 +97,7 @@
 - P1 验证：`node --test` 15/15 通过，新增过期版本返回 409 的测试；`public/index.html` 内联脚本语法通过；保存状态机已加入回归清单。
 - P2 验证：HTML 已无内联 `<style>` / `<script>`；模块导入路径全部有效；55 个导出均有声明；16 个内联处理器均已挂载到 window（其中 `event` 为内联表达式保留字）；全部模块语法检查通过；15/15 测试通过。
 - P3 验证：`node --test` 33/33 通过（15 → 33，新增 18 项覆盖库边界、API 分支与页面静态冒烟）；全部 `.mjs` 语法检查通过；CI 工作流四步骤本地逐条复现通过（语法/测试/冒烟/凭据扫描）；明文凭据扫描清零；README 已移除 `admin888` 与公开配置读密码的说明。
+- D-016 验证：`node --check` 覆盖 `app.js`、`main.js`、`navigation.js`、`config.mjs`、`validation.mjs` 全部通过；`node --test` 40/40 通过（新增 4 项：站点标题/页脚/引擎合法配置、引擎缺 `{q}` 或非 http 被拒、重复/非法 id 与引擎数量边界、`normalizeUrl` 保留 `{q}`）；冒烟测试确认新增内联处理器已挂载到 window；初始化链路 `initCloudData → applySiteAppearance → renderEngineMenu` 已核对；站点设置改为一次原子写（patch 合并提交，避免三次请求与 version 三次递增）。
 - 未执行：真实 Cloudflare preview 部署与 KV 端到端验证；浏览器交互回归需在有环境的机器上执行；GitHub Actions 云端首次运行需 push 后验证。
 
 ## Blockers
