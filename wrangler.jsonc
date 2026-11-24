@@ -4,8 +4,9 @@
   //   PR Preview  = 开 dev→main 的 PR 时，Cloudflare Git 集成自动生成隔离预览地址用于测试。
   //   production  = 顶层默认环境，合并到 main 后由 Workers Git 集成自动部署。
   //   env.preview = 供 CLI 手动演练（npm exec wrangler deploy --env preview）。
-  // KV 只声明 binding、不写 id：由 Cloudflare 在 Git 集成部署时自动创建 namespace。
-  // 自动创建的 ID 仅在 Cloudflare 后台可见，不会写回仓库；SESSION_SECRET 以 Worker Secret 注入，不进仓库。
+  // KV namespace ID 不是访问凭据（访问需 API token/binding 权限），按 Cloudflare 惯例写在仓库中。
+  // 顶层 = 生产环境，绑定预先创建的 "Navix" KV；env.preview 不写 id，部署时由平台自动创建独立 namespace。
+  // SESSION_SECRET 以 Worker Secret 注入，管理员哈希存 KV admin_auth 键，均不进仓库。
   "name": "navix",
   "main": "src/worker.mjs",
   "compatibility_date": "2026-11-23",
@@ -15,7 +16,8 @@
   },
   "kv_namespaces": [
     {
-      "binding": "NAV_DB"
+      "binding": "NAV_DB",
+      "id": "e20a2207b12549a7abe68eb7ce272b24"
     }
   ],
   "vars": {

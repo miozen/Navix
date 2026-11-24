@@ -48,9 +48,11 @@ wrangler.jsonc           Worker、静态目录、KV 绑定与三环境配置
 
 生产分支设为 `main`：日常在 `dev` 开发，验证通过后合并到 `main` 触发生产部署。`dev` 不自动部署生产。
 
-### 2. KV 自动创建（无需手动建）
+### 2. 创建 KV 并填入 ID
 
-`wrangler.jsonc` 里 KV 只声明 `binding: "NAV_DB"`、不写 `id`。首次通过 Git 集成部署时，Cloudflare 会自动创建 KV namespace，其 ID 仅在后台可见、**不会写回仓库**。因此仓库中永远不含真实 KV ID，无需手动创建或复制粘贴 ID。
+在 **Workers & Pages → KV → Create a namespace** 创建一个 KV（本仓库配置名为 `Navix`）。把它的 ID 填入 `wrangler.jsonc` 顶层 `kv_namespaces` 的 `id` 字段。
+
+KV namespace ID 不是访问凭据（访问 KV 仍需 API token / Worker binding 权限），按 Cloudflare 惯例写在仓库里即可。`env.preview` 命名环境未写 ID，部署时会由平台自动创建独立 namespace（仅供 CLI 演练；Git 集成的 PR Preview 走顶层生产配置）。
 
 ### 3. 配置会话密钥（Secret）
 
