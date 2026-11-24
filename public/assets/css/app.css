@@ -35,6 +35,24 @@
             background: rgba(255, 255, 255, 0.07);
         }
 
+        /* 夜间模式：链接标识与文字对比度（Tailwind 暗色调在深色背景下偏暗，这里按主题提亮） */
+        body.theme-dark .link-letter {
+            background: rgba(129, 140, 248, 0.28);
+            color: #c7d2fe;
+        }
+        body.theme-dark .section-link-label {
+            color: #e2e8f0;
+        }
+        body.theme-dark .friend-link-label {
+            color: #cbd5e1;
+        }
+        body.theme-dark .friend-link-label:hover {
+            color: #6ee7b7;
+        }
+        body.theme-dark .empty-hint {
+            color: rgba(203, 213, 225, 0.62);
+        }
+
         /* 自定义壁纸激活状态的遮罩 */
         body.has-custom-bg::before {
             content: '';

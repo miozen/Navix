@@ -2,20 +2,21 @@
 
 > 仅保存恢复开发所需的最小状态。架构见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，决策见 [`DECISIONS.md`](DECISIONS.md)，阶段计划见 [`CURRENT_PLAN.md`](CURRENT_PLAN.md)。
 
-- **Last Updated**：2026-11-24 09:43 GMT+8
+- **Last Updated**：2026-11-24 02:38 GMT+8
 - **Current Branch**：`dev`
 - **Remote**：远端名以各机 `git remote -v` 为准；本机为 `origin`、部分机器为 `navix`，均指向 `https://github.com/miozen/Navix.git`。`dev` 与 `main` 均已推送
-- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；当前为 `04e89f0 feat(auth): built-in default password with mandatory first-time change (D-015)`
-- **Local vs Remote**：`origin/dev` 与 `origin/main` 均为 `04e89f0`，与本地一致；`main` 为安全生产基线（不含旧版漏洞）
-- **Working Tree**：`CLEAN`
-- **Current Phase**：P0 ～ P3 全部完成；默认密码方案（D-015）已完成；生产部署成功并通过首次登录验证
-- **Current Task**：无待写代码任务
-- **Last Completed**：P3 工程化（36/36 测试、CI、文档同步）、生产 KV ID 配置、D-015 默认密码 + 首次强制改密；生产环境已部署并验证首次登录行为符合预期
+- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；基线为 `cc537ff`（docs: record production deploy success and first-login verification）。D-016 改动已在工作区，尚未提交
+- **Local vs Remote**：`origin/dev` 与 `origin/main` 基线均为 `cc537ff`；`main` 为安全生产基线（不含旧版漏洞）。D-016 待提交到 `dev` 后走 PR 合并
+- **Working Tree**：D-016 相关 9 个文件已修改（见下 Last Completed），本地测试 40/40 通过，尚未提交
+- **Current Phase**：P0 ～ P3 全部完成；D-015 默认密码方案已完成并线上验证；D-016 站点可视化设置已实现，待 PR 合并
+- **Current Task**：提交 D-016 到 `dev`，创建 `dev → main` PR 并合并（用户明确要求走 PR，禁止直接推送 `main`）
+- **Last Completed**：D-016 站点可视化设置——站点标题/页脚/搜索引擎（含自定义 `{q}` 模板）纳入 `site_config` 并由右侧面板管理；网址原地编辑替代删除重建；夜间标签对比度修复；设置面板归拢为外观/站点/后台；站点设置改为一次原子写。测试 40/40 通过
 - **Validation Performed**：
-  - `node --test tests/*.test.mjs`：36/36 通过
-  - 全部 `.mjs` 与前端 JS 语法检查通过
+  - `node --test tests/*.test.mjs`：40/40 通过（D-016 新增 4 项配置校验用例）
+  - 全部 `.mjs` 与前端 JS 语法检查通过（含 D-016 改动的 app.js/main.js/navigation.js/config.mjs/validation.mjs）
   - 页面静态冒烟、模块导入路径、内联处理器挂载、公开目录边界检查通过
   - CI 四步骤本地逐条复现通过；明文凭据扫描清零；`git diff --check` 通过
+  - D-016 集成核对：`initCloudData → applySiteAppearance → renderEngineMenu` 初始化链路完整；后端 `PUBLIC_KEYS` 已含 `siteTitle`/`footerText`/`engines`
   - **生产环境端到端（用户确认，2026-11-24 09:40）**：部署成功；页面渲染正常（时钟/天气/搜索/分区）；默认密码可登录；首次登录自动展开设置面板并引导改密，符合预期（D-015）
 - **Validation Pending**：
   - 首次改密后 KV 写入与默认密码失效的线上验证
@@ -25,10 +26,14 @@
   - `SESSION_SECRET` 需通过 Cloudflare 后台 Secret 配置；生产 KV ID 已写入 `wrangler.jsonc`（`e20a2207b12549a7abe68eb7ce272b24`）。
   - 管理员密码：内置默认 `navix666`，首次登录必须改密，改密后写入 KV `admin_auth`；旧密码 `admin888` 不得复用（D-015）。无需再跑 `generate-admin-auth.mjs`，该脚本仅作应急备用。
   - 版本检测仅为尽力而为提示；会话失效受 KV 最终一致性影响。
-  - 回退目标必须是已修复漏洞的 `main` 提交（当前 `04e89f0`），不得回退到 Pages 旧版。
+  - 回退目标必须是已修复漏洞的 `main` 提交（D-016 合并前为 `cc537ff`），不得回退到 Pages 旧版。
   - 仓库根目录旧版 `index.html`（非 `public/index.html`）仍含明文 `admin888` 与旧 Token 逻辑，不在公开目录、不影响 Workers 发布，但不得用于部署；是否删除待用户决定（删除属破坏性操作，未擅自执行）。
   - Git 集成已在 Cloudflare 后台配置完成，生产部署成功；后续 push 到 `main` 自动部署。
-- **Exact Next Action**：无阻塞性下一步。建议补做首次改密后的线上验证（新密码保存配置、默认密码失效）与 `tests/regression.md` 浏览器回归；如需清理根目录旧版 `index.html` 请先确认。
+- **Exact Next Action**：
+  1. 提交 D-016 到 `dev`（本地测试已 40/40 通过）。
+  2. 在 GitHub 创建 `dev → main` Pull Request 并合并——**禁止直接推送 `main`**（用户明确要求）。
+  3. 合并后 Cloudflare Git 集成自动部署；到线上验证站点标题/页脚/引擎自定义/网址编辑/夜间标签对比度。
+  4. 补做首次改密后线上验证与 `tests/regression.md` 浏览器回归；如需清理根目录旧版 `index.html` 请先确认。
 - **Cross-machine Ready**：`YES`（以 `origin/dev` 或 `origin/main` 为接力点）
 
 ## 稳定恢复清单

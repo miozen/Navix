@@ -55,6 +55,40 @@ test('配置白名单接受合法字段', () => {
   assert.equal(result.value.friendLinks.length, 1);
 });
 
+test('配置校验接受站点标题、页脚与自定义搜索引擎', () => {
+  const result = sanitizeConfig({
+    siteTitle: 'Mio 导航',
+    footerText: '自定义页脚',
+    engines: [
+      { id: 'google', name: 'Google', url: 'https://www.google.com/search?q={q}', icon: 'fab fa-google' },
+      { id: 'my-engine', name: '自建', url: 'https://example.com/s?word={q}&lang=zh', icon: '' }
+    ]
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.value.siteTitle, 'Mio 导航');
+  assert.equal(result.value.footerText, '自定义页脚');
+  assert.equal(result.value.engines.length, 2);
+  assert.equal(result.value.engines[1].icon, '');
+  assert.match(result.value.engines[1].url, /lang=zh/);
+});
+
+test('配置校验拒绝缺少 {q} 或非 http(s) 的引擎模板', () => {
+  assert.ok(sanitizeConfig({ engines: [{ id: 'x', name: 'X', url: 'https://example.com/search' }] }).error);
+  assert.ok(sanitizeConfig({ engines: [{ id: 'x', name: 'X', url: 'javascript:{q}' }] }).error);
+});
+
+test('配置校验拒绝重复或非法引擎 id、空列表与过多引擎', () => {
+  const base = { name: 'X', url: 'https://example.com/?q={q}' };
+  assert.ok(sanitizeConfig({ engines: [{ ...base, id: 'dup' }, { ...base, id: 'dup' }] }).error);
+  assert.ok(sanitizeConfig({ engines: [{ ...base, id: 'bad id!' }] }).error);
+  assert.ok(sanitizeConfig({ engines: [] }).error);
+  assert.ok(sanitizeConfig({ engines: Array.from({ length: 13 }, (_, i) => ({ ...base, id: 'e' + i })) }).error);
+});
+
+test('URL 规范化保留 {q} 占位符与额外查询参数', () => {
+  assert.equal(normalizeUrl('https://example.com/s?word={q}&lang=zh'), 'https://example.com/s?word={q}&lang=zh');
+});
+
 test('公开配置读取会剔除旧 adminPwd', async () => {
   const kv = {
     get: async () => JSON.stringify({ wallpaper: '', adminPwd: 'leaked', dynamicSections: [], friendLinks: [] })

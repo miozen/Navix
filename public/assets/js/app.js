@@ -50,10 +50,13 @@
         let currentLang = localStorage.getItem('nav_lang') || 'zh';
         let expandedDynamicSections = {};
         let currentModalTarget = 'friend';
+        let editingTarget = null;
         let currentEngineKey = 'google';
+        let enginesDraft = null;
+        let enginesDefaultId = 'google';
 
-        // 【关键更新】状态池加入 friendLinks 字段
-        let cloudConfig = { wallpaper: "", dynamicSections: [], friendLinks: [], version: 0 };
+        // 云端配置状态池（新增站点外观字段，云端无值时用默认兜底）
+        let cloudConfig = { wallpaper: "", dynamicSections: [], friendLinks: [], version: 0, siteTitle: "", footerText: "", engines: null };
         let saveState = 'idle';
         let saveInProgress = false;
         let saveStatusTimer = null;
@@ -71,13 +74,16 @@
                 cardFriend: "友情链接", addCloud: "添加 (云端)", addLocal: "添加 (本地)", expandMore: "展开显示更多", collapseMore: "收起部分站点",
                 footerText: "&copy; 2026 Mio-智能生态导航 · Powered by Cloudflare", adminBadge: "已登入",
                 modalAddCloud: "添加站长推荐", modalAddFriend: "添加友情链接", siteName: "网站名称", siteNamePlace: "例如：百度", siteUrl: "网站网址 (URL)",
-                btnCancel: "取消", btnSave: "保存站点", noCloudLinks: "暂无数据", loadingCloud: "正在加载...",
+                btnCancel: "取消", btnSave: "保存站点", btnSaveEdit: "保存修改", modalEdit: "编辑网址", noCloudLinks: "暂无数据", loadingCloud: "正在加载...",
                 delConfirm: "确定要删除这个链接吗？", pwdPrompt: "🔐 请输入后台管理员安全密码：", pwdSuccess: "🎉 认证成功！管理功能已全部解锁。", pwdFail: "❌ 密码错误，鉴权失败！", logoutMsg: "🔒 已安全退出管理后台，页面回归只读状态。",
                 weatherCloudy: "多云", weatherClear: "晴朗", weatherRain: "阵雨", weatherSnow: "降雪", weatherThunder: "雷阵雨", weatherDefault: "风调雨顺 · 晴", validUrlMsg: "提示：请输入有效的网址！",
                 addSectionBtn: "添加自定义区域", promptSectionName: "请输入新区域的名称 (例如：AI工具)：", delSectionConfirm: "确定要删除整个区域及其所有链接吗？", modalAddSection: "添加到自定义区域",
                 renameSectionPrompt: "请输入新的区域名称：",
                 pwdTitle: "修改管理员密码 (全站同步)", pwdInputPlace: "输入新密码", saveBtn: "保存", pwdUpdateSuccess: "管理员密码修改成功！下次登录生效。",
-                defRec: "常用推荐", defDev: "效率与开发", defCustom: "站长推荐"
+                defRec: "常用推荐", defDev: "效率与开发", defCustom: "站长推荐",
+                sectionAppearance: "外观 / APPEARANCE", sectionSite: "站点设置 / SITE (仅管理员)", sectionAdmin: "后台 / ADMIN",
+                siteTitleLabel: "站点标题", footerTextLabel: "页脚文字", enginesLabel: "搜索引擎",
+                resetEngines: "恢复默认", addEngine: "+ 添加引擎", saveEngines: "保存搜索引擎"
             },
             en: {
                 pageTitle: "Mio - Smart Responsive Nav", langTitle: "Language / 语言", themeTitle: "Color Theme (Local Pref)",
@@ -87,13 +93,16 @@
                 cardFriend: "Friend Links", addCloud: "Add (Cloud)", addLocal: "Add (Local)", expandMore: "Show More", collapseMore: "Collapse",
                 footerText: "&copy; 2026 Mio Smart Nav · Powered by Cloudflare", adminBadge: "Logged In",
                 modalAddCloud: "Add Link", modalAddFriend: "Add Friend Link", siteName: "Site Name", siteNamePlace: "e.g., Google", siteUrl: "Site URL",
-                btnCancel: "Cancel", btnSave: "Save Site", noCloudLinks: "No data available", loadingCloud: "Loading...",
+                btnCancel: "Cancel", btnSave: "Save Site", btnSaveEdit: "Save Changes", modalEdit: "Edit Link", noCloudLinks: "No data available", loadingCloud: "Loading...",
                 delConfirm: "Are you sure you want to delete this link?", pwdPrompt: "🔐 Enter Admin Password:", pwdSuccess: "🎉 Authenticated! Admin features unlocked.", pwdFail: "❌ Incorrect password!", logoutMsg: "🔒 Logged out safely. Read-only mode activated.",
                 weatherCloudy: "Cloudy", weatherClear: "Clear", weatherRain: "Rain", weatherSnow: "Snow", weatherThunder: "Thunder", weatherDefault: "Good Weather · Clear", validUrlMsg: "Please enter a valid URL!",
                 addSectionBtn: "Add Custom Section", promptSectionName: "Enter new section name (e.g., AI Tools):", delSectionConfirm: "Are you sure you want to delete this entire section?", modalAddSection: "Add to Custom Section",
                 renameSectionPrompt: "Enter new section name:",
                 pwdTitle: "Change Admin Password (Cloud Sync)", pwdInputPlace: "Enter new password", saveBtn: "Save", pwdUpdateSuccess: "Admin password updated successfully! Valid on next login.",
-                defRec: "Recommended", defDev: "Dev & Tools", defCustom: "Webmaster Picks"
+                defRec: "Recommended", defDev: "Dev & Tools", defCustom: "Webmaster Picks",
+                sectionAppearance: "APPEARANCE", sectionSite: "SITE (Admin only)", sectionAdmin: "ADMIN",
+                siteTitleLabel: "Site Title", footerTextLabel: "Footer Text", enginesLabel: "Search Engines",
+                resetEngines: "Reset", addEngine: "+ Add Engine", saveEngines: "Save Search Engines"
             }
         };
 
@@ -111,11 +120,44 @@
         }
 
         function applyLanguage() {
-            document.getElementById('page-title').innerText = t('pageTitle');
-            document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.getAttribute('data-i18n')); });
+            document.getElementById('page-title').innerText = cloudConfig.siteTitle || t('pageTitle');
+            document.title = cloudConfig.siteTitle || t('pageTitle');
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (key === 'footerText' && cloudConfig.footerText) {
+                    el.textContent = cloudConfig.footerText;
+                } else {
+                    el.innerHTML = t(key);
+                }
+            });
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.getAttribute('data-i18n-placeholder')); });
             renderDynamicSections();
             loadFriendLinks();
+        }
+
+        // 应用云端外观配置（站点标题、页脚、搜索引擎）
+        function applySiteAppearance() {
+            const title = cloudConfig.siteTitle || t('pageTitle');
+            document.getElementById('page-title').innerText = title;
+            document.title = title;
+            if (cloudConfig.footerText) {
+                const footerEl = document.querySelector('[data-i18n="footerText"]');
+                if (footerEl) footerEl.textContent = cloudConfig.footerText;
+            }
+            renderEngineMenu();
+            const list = getEngineList();
+            if (!enginesDraft) {
+                enginesDraft = JSON.parse(JSON.stringify(list));
+                enginesDefaultId = (list[0] && list[0].id) || 'google';
+                currentEngineKey = enginesDefaultId;
+            }
+            renderEnginesDraft();
+            selectEngine(currentEngineKey);
+            // 同步设置面板输入框
+            const titleInput = document.getElementById('site-title-input');
+            const footerInput = document.getElementById('footer-text-input');
+            if (titleInput) titleInput.value = cloudConfig.siteTitle || '';
+            if (footerInput) footerInput.value = cloudConfig.footerText || '';
         }
 
         // --- 2. 管理员鉴权与会话管理 ---
@@ -313,11 +355,15 @@
                             cloudConfig.dynamicSections = configData.dynamicSections;
                             localStorage.setItem('nav_dynamic_sections', JSON.stringify(cloudConfig.dynamicSections));
                         }
-                        // 【关键更新】同步云端的友情链接
+                        // 同步云端的友情链接
                         if (configData.friendLinks) {
                             cloudConfig.friendLinks = configData.friendLinks;
                             localStorage.setItem('nav_friend_links', JSON.stringify(cloudConfig.friendLinks));
                         }
+                        // 同步站点外观配置
+                        if (typeof configData.siteTitle === 'string') cloudConfig.siteTitle = configData.siteTitle;
+                        if (typeof configData.footerText === 'string') cloudConfig.footerText = configData.footerText;
+                        if (Array.isArray(configData.engines) && configData.engines.length) cloudConfig.engines = configData.engines;
                     }
                 }
             } catch (e) {
@@ -342,6 +388,7 @@
             }
             renderDynamicSections();
             loadFriendLinks();
+            applySiteAppearance();
         }
 
         // 保存状态机：idle / saving / saved / failed / unknown
@@ -365,13 +412,17 @@
         }
 
         // 通过 HttpOnly Cookie 会话保存配置，不再传递或存储明文 Token
+        // 支持 (key, value) 单字段，也支持 (patchObject) 一次原子提交多字段
         async function updateCloudConfig(key, value) {
+            const patch = (key && typeof key === 'object' && !Array.isArray(key))
+                ? key
+                : { [key]: value };
             if (saveInProgress) {
                 setSaveState('failed', currentLang === 'zh' ? '已有保存进行中，请稍候' : 'Save already in progress');
                 return false;
             }
             saveInProgress = true;
-            cloudConfig[key] = value;
+            Object.assign(cloudConfig, patch);
             setSaveState('saving', currentLang === 'zh' ? '正在保存…' : 'Saving…');
 
             const controller = new AbortController();
@@ -512,20 +563,20 @@
 
                 let linksHtml = '';
                 if (linkCount === 0) {
-                    linksHtml = `<div class="col-span-full text-center text-xs text-slate-400/60 py-4">${t('noCloudLinks')}</div>`;
+                    linksHtml = `<div class="empty-hint col-span-full text-center text-xs text-slate-400/60 py-4">${t('noCloudLinks')}</div>`;
                 } else {
                     const pClass = 'p-3';
                     const spaceXClass = 'space-x-2.5';
                     const iconSizeClass = 'w-5 h-5 text-[10px]';
                     const imgSizeClass = 'w-5 h-5';
                     const textSizeClass = 'text-sm';
-                    const prClass = 'pr-5';
+                    const prClass = 'pr-12';
                     const dragMrClass = 'mr-2.5';
                     const btnClass = 'right-2 text-xs p-1';
 
                     visibleLinks.forEach((link, idx) => {
                         const displayName = link.name;
-                        const letterHtml = `<div class="${iconSizeClass} rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold shrink-0">${displayName.charAt(0).toUpperCase()}</div>`;
+                        const letterHtml = `<div class="link-letter ${iconSizeClass} rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold shrink-0">${displayName.charAt(0).toUpperCase()}</div>`;
                         let iconHtml = letterHtml;
 
                         try {
@@ -533,7 +584,7 @@
                                 const hostname = new URL(link.url).hostname;
                                 iconHtml = `
                                     <img src="https://unavatar.io/duckduckgo/${hostname}" draggable="false" class="${imgSizeClass} rounded object-contain shrink-0" alt="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                                    <div style="display:none;" class="${iconSizeClass} rounded-full bg-indigo-500/20 text-indigo-400 items-center justify-center font-bold shrink-0">${displayName.charAt(0).toUpperCase()}</div>
+                                    <div style="display:none;" class="link-letter ${iconSizeClass} rounded-full bg-indigo-500/20 text-indigo-400 items-center justify-center font-bold shrink-0">${displayName.charAt(0).toUpperCase()}</div>
                                 `;
                             }
                         } catch (e) {}
@@ -548,10 +599,13 @@
                             <div class="flex items-center w-full overflow-hidden">
                                 <i class="fas fa-grip-vertical text-slate-500 opacity-0 group-hover:opacity-50 transition-opacity ${dragMrClass} cursor-move admin-only text-[10px] shrink-0"></i>
                                 <a href="${link.url}" draggable="false" target="_blank" rel="noopener noreferrer" class="flex items-center ${spaceXClass} truncate w-full ${prClass}">
-                                    ${iconHtml} <span class="${textSizeClass} font-medium truncate">${displayName}</span>
+                                    ${iconHtml} <span class="section-link-label ${textSizeClass} font-medium truncate">${displayName}</span>
                                 </a>
                             </div>
-                            <button type="button" onclick="deleteSectionLink(event, '${sec.id}', ${idx})" class="admin-only absolute ${btnClass} text-slate-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-500/20 rounded cursor-pointer shrink-0"><i class="fas fa-trash-alt"></i></button>
+                            <div class="admin-only absolute right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <button type="button" onclick="openEditLinkModal('section', '${sec.id}', ${idx})" class="text-xs p-1 text-slate-400 hover:text-sky-400 bg-slate-500/20 rounded cursor-pointer" title="编辑"><i class="fas fa-pen"></i></button>
+                                <button type="button" onclick="deleteSectionLink(event, '${sec.id}', ${idx})" class="text-xs p-1 text-slate-400 hover:text-red-400 bg-slate-500/20 rounded cursor-pointer" title="删除"><i class="fas fa-trash-alt"></i></button>
+                            </div>
                         </div>`;
                     });
                 }
@@ -697,32 +751,135 @@
         }
 
         // --- 8. 搜索引擎系统 ---
-        const engines = {
-            google: { action: 'https://www.google.com/search', name: 'q', placeholderKey: 'searchGoogle', icon: 'fab fa-google text-blue-400' },
-            bing: { action: 'https://cn.bing.com/search', name: 'q', placeholderKey: 'searchBing', icon: 'fab fa-microsoft text-teal-400' },
-            baidu: { action: 'https://www.baidu.com/s', name: 'wd', placeholderKey: 'searchBaidu', icon: 'fas fa-paw text-red-400' },
-            github: { action: 'https://github.com/search', name: 'q', placeholderKey: 'searchGithub', icon: 'fab fa-github text-slate-400' }
-        };
+        // 默认引擎（云端未配置 engines 时兜底）；url 为含 {q} 的模板。
+        const DEFAULT_ENGINES = [
+            { id: 'google', name: 'Google', url: 'https://www.google.com/search?q={q}', icon: 'fab fa-google text-blue-400' },
+            { id: 'bing', name: 'Bing', url: 'https://cn.bing.com/search?q={q}', icon: 'fab fa-microsoft text-teal-400' },
+            { id: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd={q}', icon: 'fas fa-paw text-red-400' },
+            { id: 'github', name: 'GitHub', url: 'https://github.com/search?q={q}', icon: 'fab fa-github text-slate-400' }
+        ];
+        const engines = Object.fromEntries(DEFAULT_ENGINES.map(e => [e.id, e]));
+
+        function getEngineList() {
+            return Array.isArray(cloudConfig.engines) && cloudConfig.engines.length
+                ? cloudConfig.engines
+                : DEFAULT_ENGINES;
+        }
 
         function toggleEngineMenu(e) { e.stopPropagation(); document.getElementById('engine-menu').classList.toggle('hidden'); }
 
+        function renderEngineMenu() {
+            const menu = document.getElementById('engine-menu');
+            if (!menu) return;
+            menu.innerHTML = getEngineList().map(e =>
+                `<button type="button" onclick="selectEngine('${e.id}')" class="w-full text-left px-4 py-2.5 hover:bg-indigo-600/20 text-sm flex items-center space-x-2 cursor-pointer"><i class="${e.icon || 'fas fa-globe text-slate-400'}"></i> <span>${e.name}</span></button>`
+            ).join('');
+        }
+
+        function currentEngine() {
+            const list = getEngineList();
+            return list.find(e => e.id === currentEngineKey) || list[0] || DEFAULT_ENGINES[0];
+        }
+
         function selectEngine(key) {
-            currentEngineKey = key;
-            const form = document.getElementById('search-form');
+            const list = getEngineList();
+            const engine = list.find(e => e.id === key) || list[0];
+            if (!engine) return;
+            currentEngineKey = engine.id;
             const input = document.getElementById('search-input');
             const icon = document.getElementById('engine-icon');
 
-            form.action = engines[key].action;
-            input.name = engines[key].name;
-            input.setAttribute('data-i18n-placeholder', engines[key].placeholderKey);
-            input.placeholder = t(engines[key].placeholderKey);
-            icon.className = engines[key].icon;
+            // 占位文案用引擎名；实际提交由 handleSearchSubmit 用 URL 模板构造
+            input.placeholder = (currentLang === 'zh' ? '在 ' : 'Search in ') + engine.name + (currentLang === 'zh' ? ' 中搜索...' : '...');
+            icon.className = engine.icon || 'fas fa-globe text-slate-400';
             document.getElementById('engine-menu').classList.add('hidden');
+        }
+
+        // 拦截搜索提交，用模板替换 {q} 后跳转，完整保留自定义模板中的额外参数
+        function handleSearchSubmit(event) {
+            event.preventDefault();
+            const term = document.getElementById('search-input').value.trim();
+            if (!term) return;
+            const template = currentEngine().url || DEFAULT_ENGINES[0].url;
+            const target = template.replace('{q}', encodeURIComponent(term));
+            window.open(target, '_blank', 'noopener,noreferrer');
+        }
+
+        // --- 8.1 站点设置（仅管理员） ---
+        function renderEnginesDraft() {
+            const list = document.getElementById('engines-list');
+            if (!list) return;
+            list.innerHTML = (enginesDraft || []).map((e, i) => `
+                <div class="engine-row border border-slate-700 rounded-lg p-2 space-y-1.5" data-idx="${i}">
+                    <div class="flex gap-1.5">
+                        <input type="text" class="engine-name w-1/3 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-slate-100" value="${e.name.replace(/"/g, '&quot;')}" placeholder="名称">
+                        <input type="text" class="engine-url flex-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-slate-100" value="${e.url.replace(/"/g, '&quot;')}" placeholder="https://...q={q}">
+                        <button type="button" onclick="removeEngine(${i})" class="text-red-400 hover:text-red-300 px-1 cursor-pointer" title="删除">×</button>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <input type="text" class="engine-icon flex-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-[10px] text-slate-100" value="${(e.icon || '').replace(/"/g, '&quot;')}" placeholder="图标 class（可选）">
+                        <button type="button" onclick="setDefaultEngine(${i})" class="text-[10px] px-1.5 py-1 rounded ${e.id === enginesDefaultId ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'} cursor-pointer">${e.id === enginesDefaultId ? '默认' : '设为默认'}</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        function syncEnginesDraftFromInputs() {
+            document.querySelectorAll('#engines-list .engine-row').forEach(row => {
+                const i = Number(row.getAttribute('data-idx'));
+                if (!enginesDraft[i]) return;
+                enginesDraft[i].name = row.querySelector('.engine-name').value.trim();
+                enginesDraft[i].url = row.querySelector('.engine-url').value.trim();
+                enginesDraft[i].icon = row.querySelector('.engine-icon').value.trim();
+            });
+        }
+
+        function setDefaultEngine(idx) {
+            syncEnginesDraftFromInputs();
+            if (enginesDraft[idx]) enginesDefaultId = enginesDraft[idx].id;
+            renderEnginesDraft();
+        }
+
+        function addEngine() {
+            syncEnginesDraftFromInputs();
+            let id = 'engine' + Date.now().toString(36);
+            enginesDraft.push({ id, name: '新引擎', url: 'https://example.com/search?q={q}', icon: '' });
+            renderEnginesDraft();
+        }
+
+        function removeEngine(idx) {
+            syncEnginesDraftFromInputs();
+            enginesDraft.splice(idx, 1);
+            if (!enginesDraft.length) enginesDraft = JSON.parse(JSON.stringify(DEFAULT_ENGINES));
+            if (!enginesDraft.some(e => e.id === enginesDefaultId)) enginesDefaultId = enginesDraft[0].id;
+            renderEnginesDraft();
+        }
+
+        function resetEngines() {
+            enginesDraft = JSON.parse(JSON.stringify(DEFAULT_ENGINES));
+            enginesDefaultId = DEFAULT_ENGINES[0].id;
+            renderEnginesDraft();
+        }
+
+        async function applySiteSettings() {
+            const title = (document.getElementById('site-title-input')?.value || '').trim();
+            const footer = (document.getElementById('footer-text-input')?.value || '').trim();
+            syncEnginesDraftFromInputs();
+            const valid = enginesDraft.every(e => e.name && e.url.includes('{q}') && /^https?:\/\//i.test(e.url));
+            if (!valid) {
+                return alert(currentLang === 'zh' ? '每个引擎都需要名称和含 {q} 的 http(s) 网址。' : 'Each engine needs a name and an http(s) URL containing {q}.');
+            }
+            const ordered = [...enginesDraft].sort((a, b) => (a.id === enginesDefaultId ? -1 : b.id === enginesDefaultId ? 1 : 0));
+            const ok = await updateCloudConfig({ engines: ordered, siteTitle: title, footerText: footer });
+            if (ok === false) return;
+            currentEngineKey = enginesDefaultId;
+            applySiteAppearance();
+            alert(currentLang === 'zh' ? '站点设置已保存。' : 'Site settings saved.');
         }
 
         // --- 9. 弹窗与链接保存 ---
         function openLinkModal(target) {
             currentModalTarget = target;
+            editingTarget = null;
             const textEl = document.getElementById('modal-title-text');
 
             if (target === 'friend') {
@@ -730,18 +887,41 @@
             } else if (target.startsWith('section_')) {
                 textEl.innerText = t('modalAddSection');
             }
+            document.querySelector('#modal button[data-i18n="btnSave"]').setAttribute('data-i18n', 'btnSave');
+            document.querySelector('#modal button[data-i18n="btnSave"]').innerText = t('btnSave');
             toggleModal(true);
         }
 
-        function toggleModal(show) {
+        // 编辑分区链接或友链：预填当前值，保存时走替换而非新增。
+        function openEditLinkModal(type, secId, idx) {
+            let link;
+            if (type === 'friend') {
+                currentModalTarget = 'friend';
+                link = (cloudConfig.friendLinks || [])[idx];
+            } else {
+                currentModalTarget = `section_${secId}`;
+                const sec = (cloudConfig.dynamicSections || []).find(s => s.id === secId);
+                link = sec && sec.links[idx];
+            }
+            if (!link) return;
+            editingTarget = { type, secId, idx };
+            document.getElementById('modal-title-text').innerText = t('modalEdit');
+            const saveBtn = document.querySelector('#modal button[data-i18n="btnSave"]');
+            saveBtn.setAttribute('data-i18n', 'btnSaveEdit');
+            saveBtn.innerText = t('btnSaveEdit');
+            toggleModal(true, link.name, link.url);
+        }
+
+        function toggleModal(show, prefillName = '', prefillUrl = '') {
             const modal = document.getElementById('modal');
             if (show) {
-                document.getElementById('site-name').value = '';
-                document.getElementById('site-url').value = '';
+                document.getElementById('site-name').value = prefillName;
+                document.getElementById('site-url').value = prefillUrl;
                 modal.classList.remove('hidden');
                 setTimeout(() => document.getElementById('site-name')?.focus(), 50);
             } else {
                 modal.classList.add('hidden');
+                editingTarget = null;
             }
         }
 
@@ -770,10 +950,15 @@
                 return alert(currentLang === 'zh' ? '请完整填写有效的名称和网址！' : 'Please enter a valid name and URL!');
             }
 
-            // 【关键更新】保存友情链接时，更新云端状态池并同步
+            const edit = editingTarget;
+            // 保存友情链接时，更新云端状态池并同步（新增 push / 编辑 splice 替换）
             if (currentModalTarget === 'friend') {
                 let links = cloudConfig.friendLinks || [];
-                links.push({ name, url });
+                if (edit && edit.type === 'friend') {
+                    links.splice(edit.idx, 1, { name, url });
+                } else {
+                    links.push({ name, url });
+                }
                 cloudConfig.friendLinks = links;
                 localStorage.setItem('nav_friend_links', JSON.stringify(links));
                 loadFriendLinks();
@@ -783,7 +968,11 @@
                 let secs = cloudConfig.dynamicSections || [];
                 const sec = secs.find(s => s.id === secId);
                 if (sec) {
-                    sec.links.push({ name, url });
+                    if (edit && edit.type === 'section') {
+                        sec.links.splice(edit.idx, 1, { name, url });
+                    } else {
+                        sec.links.push({ name, url });
+                    }
                     await saveDynamicSections(secs);
                 }
             }
@@ -797,15 +986,18 @@
             container.innerHTML = '';
 
             if (links.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center text-xs text-slate-400/60 py-4">${t('noCloudLinks')}</div>`;
+                container.innerHTML = `<div class="empty-hint col-span-full text-center text-xs text-slate-400/60 py-4">${t('noCloudLinks')}</div>`;
                 return;
             }
 
             links.forEach((item, index) => {
                 container.innerHTML += `
                     <div class="group relative flex items-center justify-between p-2.5 bg-slate-500/5 border border-slate-500/10 rounded-xl hover:bg-emerald-600/10 transition-all text-center">
-                        <a href="${item.url}" draggable="false" target="_blank" rel="noopener noreferrer" class="w-full text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors truncate px-2">${item.name}</a>
-                        <button type="button" onclick="deleteFriendLink(event, ${index})" class="admin-only absolute right-1 text-[10px] text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-500/10 px-1 rounded cursor-pointer"><i class="fas fa-times"></i></button>
+                        <a href="${item.url}" draggable="false" target="_blank" rel="noopener noreferrer" class="friend-link-label w-full text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors truncate px-2 pr-12">${item.name}</a>
+                        <div class="admin-only absolute right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button type="button" onclick="openEditLinkModal('friend', null, ${index})" class="text-[10px] text-slate-400 hover:text-sky-400 bg-slate-500/10 px-1 rounded cursor-pointer" title="编辑"><i class="fas fa-pen"></i></button>
+                            <button type="button" onclick="deleteFriendLink(event, ${index})" class="text-[10px] text-slate-500 hover:text-red-400 bg-slate-500/10 px-1 rounded cursor-pointer" title="删除"><i class="fas fa-times"></i></button>
+                        </div>
                     </div>`;
             });
         }
@@ -872,7 +1064,16 @@ export {
     renderWeather,
     toggleEngineMenu,
     selectEngine,
+    currentEngine,
+    handleSearchSubmit,
+    applySiteAppearance,
+    setDefaultEngine,
+    addEngine,
+    removeEngine,
+    resetEngines,
+    applySiteSettings,
     openLinkModal,
+    openEditLinkModal,
     toggleModal,
     closeModalOnBlank,
     normalizeURL,

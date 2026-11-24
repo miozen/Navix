@@ -9,17 +9,24 @@ import {
     addCustomSection, renameCustomSection, deleteCustomSection,
     renderDynamicSections, deleteSectionLink,
     toggleEngineMenu, selectEngine,
-    openLinkModal, toggleModal, closeModalOnBlank, saveActiveLink, deleteFriendLink
+    handleSearchSubmit, applySiteAppearance,
+    setDefaultEngine, addEngine, removeEngine, resetEngines, applySiteSettings,
+    openLinkModal, openEditLinkModal, toggleModal, closeModalOnBlank, saveActiveLink, deleteFriendLink
 } from './features/navigation.js';
 
 Object.assign(window, {
     setLanguage, checkAdminSession, triggerAdminLogin, logoutAdmin, updateAdminPwd,
     toggleThemeMenu, setBaseTheme, applyCustomBg, clearCustomBg,
-    toggleEngineMenu, selectEngine, addCustomSection, openLinkModal,
+    toggleEngineMenu, selectEngine, handleSearchSubmit, applySiteAppearance,
+    setDefaultEngine, addEngine, removeEngine, resetEngines, applySiteSettings,
+    addCustomSection, openLinkModal, openEditLinkModal,
     closeModalOnBlank, toggleModal, saveActiveLink,
     handleDragStart, handleDragEnd, handleDragOver, handleDrop,
     deleteSectionLink, renameCustomSection, deleteCustomSection, deleteFriendLink
 });
+
+// 搜索引擎提交由自定义 URL 模板接管（含 {q} 占位符），不走表单默认 action
+document.getElementById('search-form')?.addEventListener('submit', handleSearchSubmit);
 
 // --- 10. 初始化与键盘快捷键 ---
         document.addEventListener('click', () => {
