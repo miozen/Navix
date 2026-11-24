@@ -2,5 +2,7 @@ export {
     getSolarTerm,
     updateClockAndGreeting,
     fetchWeather,
-    renderWeather
+    renderWeather,
+    updateBackToTop,
+    scrollToTop
 } from '../app.js';

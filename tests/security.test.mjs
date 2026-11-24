@@ -72,6 +72,12 @@ test('配置校验接受站点标题、页脚与自定义搜索引擎', () => {
   assert.match(result.value.engines[1].url, /lang=zh/);
 });
 
+test('配置校验容忍 engines 为 null（未初始化配置不覆盖云端有效值）', () => {
+  const result = sanitizeConfig({ wallpaper: '', engines: null });
+  assert.equal(result.error, undefined, 'null 不应再报「engines 格式无效」');
+  assert.equal('engines' in result.value, false, 'null 不应写入清洗结果，避免覆盖已有配置');
+});
+
 test('配置校验拒绝缺少 {q} 或非 http(s) 的引擎模板', () => {
   assert.ok(sanitizeConfig({ engines: [{ id: 'x', name: 'X', url: 'https://example.com/search' }] }).error);
   assert.ok(sanitizeConfig({ engines: [{ id: 'x', name: 'X', url: 'javascript:{q}' }] }).error);
