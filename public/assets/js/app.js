@@ -59,6 +59,9 @@
         let cloudConfig = { wallpaper: "", dynamicSections: [], friendLinks: [], version: 0, siteTitle: "", footerText: "", engines: null };
         let saveState = 'idle';
         let saveInProgress = false;
+        // 串行保存队列：并发保存不再被布尔锁静默丢弃，而是依次执行。
+        // 这样快速连续添加/编辑云端数据时每一次都会真正提交，避免「点了没反应」。
+        let saveQueue = Promise.resolve();
         let saveStatusTimer = null;
 
         let dragType = null;
@@ -146,6 +149,9 @@
             }
             renderEngineMenu();
             const list = getEngineList();
+            // 写回云端状态：未配置引擎时 cloudConfig.engines 为 null，
+            // 若不写回，后续保存任意配置都会把 null 提交导致「engines 格式无效」。
+            cloudConfig.engines = list;
             if (!enginesDraft) {
                 enginesDraft = JSON.parse(JSON.stringify(list));
                 enginesDefaultId = (list[0] && list[0].id) || 'google';
@@ -211,6 +217,19 @@
                 console.error('登录失败', e);
                 alert(currentLang === 'zh' ? '登录失败，无法连接服务器！' : 'Login failed. Server unavailable.');
             }
+        }
+
+        // 页脚统一入口：未登录时单击触发登录；已登录时单击确认后退出。
+        // 用单一 click 语义替代原来的 dblclick，避免登录/退出入口不对称与双击重复触发。
+        function handleAdminTrigger() {
+            if (localStorage.getItem('nav_admin_auth') === 'true') {
+                const ok = confirm(currentLang === 'zh'
+                    ? '确定要退出后台管理吗？'
+                    : 'Log out of admin mode?');
+                if (ok) logoutAdmin();
+                return;
+            }
+            triggerAdminLogin();
         }
 
         async function logoutAdmin() {
@@ -413,66 +432,92 @@
 
         // 通过 HttpOnly Cookie 会话保存配置，不再传递或存储明文 Token
         // 支持 (key, value) 单字段，也支持 (patchObject) 一次原子提交多字段
+        // 串行队列执行：并发保存依次排队，不被布尔锁静默丢弃（根治「偶发无响应」）。
         async function updateCloudConfig(key, value) {
             const patch = (key && typeof key === 'object' && !Array.isArray(key))
                 ? key
                 : { [key]: value };
-            if (saveInProgress) {
-                setSaveState('failed', currentLang === 'zh' ? '已有保存进行中，请稍候' : 'Save already in progress');
-                return false;
-            }
+
+            // 把本次保存追加到队列尾部；无论前一个任务是 resolve 还是 reject 都继续执行。
+            // 用 .catch(() => {}) 生成"干净"的下游队列，避免某个失败毒化整条链。
+            const task = saveQueue.then(() => performSave(patch), () => performSave(patch));
+            saveQueue = task.then(() => {}, () => {});
+            return task;
+        }
+
+        // 真正执行一次保存；所有可能抛错的操作都在 try 内，finally 一定释放锁。
+        async function performSave(patch) {
             saveInProgress = true;
-            Object.assign(cloudConfig, patch);
-            setSaveState('saving', currentLang === 'zh' ? '正在保存…' : 'Saving…');
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
-
             try {
-                const res = await fetch('/api/config', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    signal: controller.signal,
-                    body: JSON.stringify({ ...cloudConfig, version: cloudConfig.version || 0 })
-                });
+                Object.assign(cloudConfig, patch);
+                setSaveState('saving', currentLang === 'zh' ? '正在保存…' : 'Saving…');
 
-                const data = await res.json().catch(() => ({}));
-
-                if (!res.ok) {
-                    if (res.status === 401) {
-                        setSaveState('failed', currentLang === 'zh' ? '会话已失效，请重新登录' : 'Session expired');
-                        await logoutAdmin();
-                    } else if (res.status === 409) {
-                        setSaveState('failed', data.message || '配置可能已被其他设备更新，请刷新确认');
-                        alert(data.message || '配置可能已被其他设备更新，请刷新确认');
-                    } else {
-                        setSaveState('failed', data.message || `保存失败 (${res.status})`);
-                        alert(data.message || `保存失败：服务端异常 (${res.status})`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                try {
+                    // 只剔除 null/undefined（如未初始化的 engines），保留 '' 与 [] 的清空语义。
+                    const body = {};
+                    for (const [k, v] of Object.entries({ ...cloudConfig, version: cloudConfig.version || 0 })) {
+                        if (v !== null && v !== undefined) body[k] = v;
                     }
-                    return false;
-                }
 
-                if (typeof data.version === 'number') cloudConfig.version = data.version;
-                setSaveState('saved', currentLang === 'zh' ? '已保存' : 'Saved');
-                return true;
-            } catch (e) {
-                console.error('云端同步失败', e);
-                const isTimeout = e.name === 'AbortError';
-                const msg = isTimeout
-                    ? (currentLang === 'zh' ? '保存结果未知，请刷新确认' : 'Save result unknown, please refresh')
-                    : (currentLang === 'zh' ? '网络异常，结果未知，请刷新确认' : 'Network error, result unknown');
-                setSaveState('unknown', msg);
-                alert(msg);
-                return false;
+                    const res = await fetch('/api/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        signal: controller.signal,
+                        body: JSON.stringify(body)
+                    });
+
+                    const data = await res.json().catch(() => ({}));
+
+                    if (!res.ok) {
+                        if (res.status === 401) {
+                            setSaveState('failed', currentLang === 'zh' ? '会话已失效，请重新登录' : 'Session expired');
+                            await logoutAdmin();
+                        } else if (res.status === 409) {
+                            setSaveState('failed', data.message || '配置可能已被其他设备更新，请刷新确认');
+                            alert(data.message || '配置可能已被其他设备更新，请刷新确认');
+                        } else {
+                            setSaveState('failed', data.message || `保存失败 (${res.status})`);
+                            alert(data.message || `保存失败：服务端异常 (${res.status})`);
+                        }
+                        return false;
+                    }
+
+                    if (typeof data.version === 'number') cloudConfig.version = data.version;
+                    setSaveState('saved', currentLang === 'zh' ? '已保存' : 'Saved');
+                    return true;
+                } catch (e) {
+                    console.error('云端同步失败', e);
+                    const isTimeout = e.name === 'AbortError';
+                    const msg = isTimeout
+                        ? (currentLang === 'zh' ? '保存结果未知，请刷新确认' : 'Save result unknown, please refresh')
+                        : (currentLang === 'zh' ? '网络异常，结果未知，请刷新确认' : 'Network error, result unknown');
+                    setSaveState('unknown', msg);
+                    alert(msg);
+                    return false;
+                } finally {
+                    clearTimeout(timeoutId);
+                }
             } finally {
-                clearTimeout(timeoutId);
                 saveInProgress = false;
             }
         }
 
         function toggleThemeMenu(e) { e.stopPropagation(); document.getElementById('theme-panel').classList.toggle('hidden'); }
         function setBaseTheme(themeName) { document.body.classList.remove('theme-light', 'theme-dark'); document.body.classList.add(themeName); localStorage.setItem('nav_theme_mode', themeName); document.getElementById('theme-panel').classList.add('hidden'); }
+
+        // 回到顶部：根据滚动距离切换按钮显隐，点击平滑滚动（scroll-behavior: smooth 已在 CSS 设置）
+        function updateBackToTop() {
+            const btn = document.getElementById('back-to-top');
+            if (!btn) return;
+            if (window.scrollY > 300) btn.classList.add('is-visible');
+            else btn.classList.remove('is-visible');
+        }
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
         function applyWallpaperStyles(url) {
             document.body.style.backgroundImage = `url('${url}')`;
@@ -1038,6 +1083,7 @@ export {
     applyLanguage,
     checkAdminSession,
     triggerAdminLogin,
+    handleAdminTrigger,
     logoutAdmin,
     updateAdminPwd,
     handleDragStart,
@@ -1079,5 +1125,7 @@ export {
     normalizeURL,
     saveActiveLink,
     loadFriendLinks,
-    deleteFriendLink
+    deleteFriendLink,
+    updateBackToTop,
+    scrollToTop
 };

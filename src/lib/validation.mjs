@@ -113,7 +113,9 @@ export function sanitizeConfig(input) {
     value.footerText = result.value;
   }
 
-  if ('engines' in input) {
+  // engines 为 null（旧客户端/未初始化配置）时视为未提供：忽略该字段，
+  // 避免校验报错，也避免用 null 覆盖云端已有的有效引擎配置。
+  if ('engines' in input && input.engines !== null) {
     if (!Array.isArray(input.engines) || input.engines.length < 1 || input.engines.length > 12) {
       return { error: 'engines 格式无效' };
     }

@@ -249,3 +249,23 @@
                 transition-duration: 0.001ms !important;
             }
         }
+
+        /* 回到顶部按钮：滚动到阈值后由 JS 切换 .is-visible */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .back-to-top {
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+        }
+
+        .back-to-top.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+            visibility: visible;
+        }
+
+        body.theme-dark .back-to-top {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(100, 116, 139, 0.5);
+        }
