@@ -31,12 +31,17 @@ test('页面无内联脚本与样式，入口引用有效', () => {
   assert.equal(existsSync(join(ROOT, 'index.html')), false, '根目录遗留旧版 index.html 应已清理');
 });
 
-test('设置面板已加宽，密码输入使用遮罩模态框且模块已下沉', () => {
+test('设置面板已加宽且视口固定，密码输入使用遮罩模态框且模块已下沉', () => {
+  assert.match(HTML, /id="settings-floating"[^>]*\bfixed\b/);
+  assert.doesNotMatch(HTML, /id="settings-floating"[^>]*\brelative\b/, '外层 fixed 容器不应混用 relative 覆盖定位');
   assert.match(HTML, /id="theme-panel"[^>]*w-\[21\.25rem\]/);
   assert.match(HTML, /id="auth-modal"/);
   assert.match(HTML, /<input[^>]+type="password"[^>]+id="auth-modal-password"/);
   const adminSrc = readFileSync(join(PUBLIC, 'assets/js/features/admin.js'), 'utf8');
   assert.doesNotMatch(adminSrc, /\bprompt\s*\(/, '登录与改密确认不应使用明文 prompt()');
+  const navSrc = readFileSync(join(PUBLIC, 'assets/js/features/navigation.js'), 'utf8');
+  assert.match(navSrc, /unavatar\.io\/duckduckgo\/[^`]+\?fallback=false/);
+  assert.match(navSrc, /function buildLinkIconHtml/);
   const appLines = readFileSync(join(PUBLIC, 'assets/js/app.js'), 'utf8').split('\n').length;
   assert.ok(appLines < 100, `app.js 应精简为兼容聚合入口，当前行数: ${appLines}`);
 });
