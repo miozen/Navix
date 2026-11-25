@@ -98,8 +98,33 @@ export function deleteCustomSection(id) {
     saveDynamicSections(secs);
 }
 
+function isPrivateHost(hostname) {
+    return /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|.*\.local$)/i.test(hostname || '');
+}
+
+export function handleLinkIconError(img) {
+    const fallback = img.dataset.fallback;
+    if (fallback && !img.dataset.triedFallback) {
+        img.dataset.triedFallback = '1';
+        img.src = fallback;
+        return;
+    }
+    img.style.display = 'none';
+    if (img.nextElementSibling) img.nextElementSibling.style.display = 'flex';
+}
+
+export function handleLinkIconLoad(img) {
+    // 若服务端返回 200 但为空图（naturalWidth === 0），视为无效图标继续回退
+    if (img.naturalWidth === 0) {
+        handleLinkIconError(img);
+    }
+}
+
 /**
- * 构建站点图标 HTML；真实图标加载失败（404 / 网络异常）时自动回退为首字符圆标。
+ * 构建站点图标 HTML（三级回退策略）：
+ * 1) 主图标源：DuckDuckGo 原生图标服务（公网站点）
+ * 2) 二级兜底：目标站点自身 <origin>/favicon.ico（内网/私有站点直接走此级）
+ * 3) 最终兜底：首字母 / 汉字圆标
  */
 function buildLinkIconHtml(name, url, imgSizeClass = 'w-5 h-5', letterClass = 'w-5 h-5 text-[10px]') {
     const firstChar = escapeHtml((String(name || '').charAt(0) || '?').toUpperCase());
@@ -108,11 +133,19 @@ function buildLinkIconHtml(name, url, imgSizeClass = 'w-5 h-5', letterClass = 'w
 
     try {
         if (url) {
-            const hostname = new URL(url).hostname;
-            return `
-                <img src="https://unavatar.io/duckduckgo/${encodeURIComponent(hostname)}?fallback=false" loading="lazy" draggable="false" class="${imgSizeClass} rounded object-contain shrink-0" alt="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                ${letterBadge(true)}
-            `;
+            const parsed = new URL(url);
+            if (['http:', 'https:'].includes(parsed.protocol)) {
+                const siteFavicon = `${parsed.origin}/favicon.ico`;
+                const isLocal = isPrivateHost(parsed.hostname);
+                const primarySrc = isLocal
+                    ? siteFavicon
+                    : `https://icons.duckduckgo.com/ip3/${encodeURIComponent(parsed.hostname)}.ico`;
+                const fallbackAttr = isLocal ? '' : ` data-fallback="${escapeHtml(siteFavicon)}"`;
+                return `
+                    <img src="${escapeHtml(primarySrc)}"${fallbackAttr} loading="lazy" draggable="false" class="${imgSizeClass} rounded object-contain shrink-0" alt="icon" onload="handleLinkIconLoad(this)" onerror="handleLinkIconError(this)" />
+                    ${letterBadge(true)}
+                `;
+            }
         }
     } catch {}
     return letterBadge(false);

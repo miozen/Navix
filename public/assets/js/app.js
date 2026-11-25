@@ -40,6 +40,8 @@ export {
     handleDragOver,
     handleDrop,
     saveDynamicSections,
+    handleLinkIconError,
+    handleLinkIconLoad,
     addCustomSection,
     renameCustomSection,
     deleteCustomSection,

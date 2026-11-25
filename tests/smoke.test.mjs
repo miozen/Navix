@@ -40,8 +40,13 @@ test('设置面板已加宽且视口固定，密码输入使用遮罩模态框�
   const adminSrc = readFileSync(join(PUBLIC, 'assets/js/features/admin.js'), 'utf8');
   assert.doesNotMatch(adminSrc, /\bprompt\s*\(/, '登录与改密确认不应使用明文 prompt()');
   const navSrc = readFileSync(join(PUBLIC, 'assets/js/features/navigation.js'), 'utf8');
-  assert.match(navSrc, /unavatar\.io\/duckduckgo\/[^`]+\?fallback=false/);
+  assert.doesNotMatch(navSrc, /unavatar\.io/, '不应继续依赖限流的 unavatar.io');
+  assert.match(navSrc, /icons\.duckduckgo\.com\/ip3\//);
   assert.match(navSrc, /function buildLinkIconHtml/);
+  assert.match(navSrc, /handleLinkIconError/);
+  const mainSrc = readFileSync(join(PUBLIC, 'assets/js/main.js'), 'utf8');
+  assert.match(mainSrc, /\bhandleLinkIconError\b/);
+  assert.match(mainSrc, /\bhandleLinkIconLoad\b/);
   const appLines = readFileSync(join(PUBLIC, 'assets/js/app.js'), 'utf8').split('\n').length;
   assert.ok(appLines < 100, `app.js 应精简为兼容聚合入口，当前行数: ${appLines}`);
 });

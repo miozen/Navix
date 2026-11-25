@@ -8,7 +8,7 @@
 - **前端**：原生 HTML / CSS / ES Modules，无框架、无构建。页面壳在 `public/index.html`，样式在 `public/assets/css/app.css`，逻辑在 `public/assets/js/`。
 - **后端**：Cloudflare Worker 入口 `src/worker.mjs`，只处理 `/api/*`；其余请求由 Static Assets 提供。
 - **存储**：Cloudflare KV，绑定变量 `NAV_DB`；公开配置键 `site_config`，私有管理员凭据键 `admin_auth`。
-- **第三方服务**：`ipapi.co`（定位）、`open-meteo`（天气）、`unavatar.io`（图标），以及 Tailwind / Font Awesome CDN。
+- **第三方服务**：`ipapi.co`（定位）、`open-meteo`（天气）、`icons.duckduckgo.com`（图标主源，失败回退目标站点 `/favicon.ico`），以及 Tailwind / Font Awesome CDN。
 - **状态说明**：`dev` 分支已是 Workers 架构；现网生产仍为 Pages 旧架构，切换生产前必须完成 preview 验证（D-013、D-014）。
 
 ## 2. 模块与职责
