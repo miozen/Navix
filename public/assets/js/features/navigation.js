@@ -122,8 +122,8 @@ export function handleLinkIconLoad(img) {
 
 /**
  * 构建站点图标 HTML（三级回退策略）：
- * 1) 主图标源：DuckDuckGo 原生图标服务（公网站点）
- * 2) 二级兜底：目标站点自身 <origin>/favicon.ico（内网/私有站点直接走此级）
+ * 1) 优先直连目标站点自身 <origin>/favicon.ico（兼容小众站、面板站与内网站）
+ * 2) 公网站点若自身 /favicon.ico 失败，回退至 DuckDuckGo 图标服务
  * 3) 最终兜底：首字母 / 汉字圆标
  */
 function buildLinkIconHtml(name, url, imgSizeClass = 'w-5 h-5', letterClass = 'w-5 h-5 text-[10px]') {
@@ -135,12 +135,10 @@ function buildLinkIconHtml(name, url, imgSizeClass = 'w-5 h-5', letterClass = 'w
         if (url) {
             const parsed = new URL(url);
             if (['http:', 'https:'].includes(parsed.protocol)) {
-                const siteFavicon = `${parsed.origin}/favicon.ico`;
-                const isLocal = isPrivateHost(parsed.hostname);
-                const primarySrc = isLocal
-                    ? siteFavicon
-                    : `https://icons.duckduckgo.com/ip3/${encodeURIComponent(parsed.hostname)}.ico`;
-                const fallbackAttr = isLocal ? '' : ` data-fallback="${escapeHtml(siteFavicon)}"`;
+                const primarySrc = `${parsed.origin}/favicon.ico`;
+                const fallbackAttr = isPrivateHost(parsed.hostname)
+                    ? ''
+                    : ` data-fallback="${escapeHtml(`https://icons.duckduckgo.com/ip3/${encodeURIComponent(parsed.hostname)}.ico`)}"`;
                 return `
                     <img src="${escapeHtml(primarySrc)}"${fallbackAttr} loading="lazy" draggable="false" class="${imgSizeClass} rounded object-contain shrink-0" alt="icon" onload="handleLinkIconLoad(this)" onerror="handleLinkIconError(this)" />
                     ${letterBadge(true)}
