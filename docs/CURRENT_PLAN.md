@@ -48,7 +48,7 @@
   4. 密码安全模态框：新增 `#auth-modal`（`type="password"` 遮罩输入、Enter 提交、Esc/空白取消），`updateAdminPwd` 与 `triggerAdminLogin` 均复用该模态框，彻底替换原生明文 `prompt()`。
   5. 首屏会话主动探活：后端新增只读 `GET /api/session`，前端仅在本地有登录标记时静默探活，会话失效时自动回归只读态，避免“伪登录”。
   6. 前端模块真实下沉：将 `public/assets/js/app.js` 1244 行实现下沉至 `core/utils.js`、`core/state.js`、`core/i18n.js`、`core/api.js` 与 `features/*`，`main.js` 通过生命周期回调解耦循环依赖，`app.js` 仅作兼容重导出。
-  7. 友链图标与设置面板视口悬浮：抽出 `buildLinkIconHtml` 公共函数为友情链接补充站点图标，并为 `unavatar.io/duckduckgo` 加上 `?fallback=false` 以严格回退至首字符圆标；移除 `public/index.html` 中 `#settings-floating` 冲突的 `relative` 类，使设置按钮真正跟随视口左上角悬浮。测试 43/43 全部通过。
+  7. 友链图标、设置面板视口悬浮与三级图标回退：抽出 `buildLinkIconHtml` 公共函数为友情链接补充站点图标，针对 `unavatar.io` 免费版 25 次限流改为「DuckDuckGo 原生图标服务 → 目标站点 `<origin>/favicon.ico`（内网/私有站点直连此级）→ 首字符圆标」三级回退（含 `naturalWidth === 0` 校验）；移除 `public/index.html` 中 `#settings-floating` 冲突的 `relative` 类，使设置按钮真正跟随视口左上角悬浮。测试 43/43 全部通过。
 
 ## In Progress
 

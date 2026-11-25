@@ -2,7 +2,7 @@
 
 > 仅保存恢复开发所需的最小状态。架构见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，决策见 [`DECISIONS.md`](DECISIONS.md)，阶段计划见 [`CURRENT_PLAN.md`](CURRENT_PLAN.md)。
 
-- **Last Updated**：2026-11-25 09:10 GMT+8
+- **Last Updated**：2026-11-25 09:30 GMT+8
 - **Current Branch**：`dev`
 - **Remote**：远端名以各机 `git remote -v` 为准；本机为 `origin`、部分机器为 `navix`，均指向 `https://github.com/miozen/Navix.git`
 - **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；`main` 远端为 `7efe37d`（Merge PR #4）
@@ -19,7 +19,7 @@
     4. 新增带遮罩的 `#auth-modal` 密码输入模态框，登录（`triggerAdminLogin`）与修改密码旧密码确认（`updateAdminPwd`）均复用该模态框，移除原生明文 `prompt()`。
     5. 后端新增只读 `GET /api/session`，前端首屏在本地存在登录态时静默探活，会话失效时自动清理本地状态回归只读态。
     6. 将 `public/assets/js/app.js` 真实下沉模块化至 `core/utils.js`、`core/state.js`、`core/i18n.js`、`core/api.js` 与 `features/*`，`main.js` 通过 `hooks` 解耦循环依赖，`app.js` 精简为兼容聚合入口。
-    7. 补齐友链图标与严格兜底，并修复设置按钮跟随视口悬浮：抽取 `buildLinkIconHtml` 复用，对 `unavatar.io` 启用 `?fallback=false` 严格回退首字符圆标；移除 `#settings-floating` 冲突的 `relative` 类使 `fixed` 生效。
+    7. 补齐友链图标与设置按钮跟随视口悬浮，并重构图标拉取策略：移除限流 25 次的 `unavatar.io`，改为「`icons.duckduckgo.com/ip3/<host>.ico` → 目标站点 `<origin>/favicon.ico`（内网/私有域名直连）→ 首字符圆标」三级回退（含 `naturalWidth === 0` 校验）；移除 `#settings-floating` 冲突的 `relative` 类使 `fixed` 生效。
 - **Validation Performed**：
   - `node --test tests/*.test.mjs`：43/43 全部通过（含新增 `GET /api/session` 集成测试与 6 项冒烟测试）
   - 全部 `src/`、`scripts/`、`tests/`（`.mjs`）与 `public/assets/js/`（`.js`）语法检查 `node --check` 通过（WSL Node v22.23.4）

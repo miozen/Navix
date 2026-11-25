@@ -10,6 +10,7 @@ import { toggleThemeMenu, setBaseTheme, applyWallpaperStyles, applyCustomBg, cle
 import { updateClockAndGreeting, fetchWeather, renderWeather, initBackToTop, scrollToTop } from './features/widgets.js';
 import {
     handleDragStart, handleDragEnd, handleDragOver, handleDrop,
+    handleLinkIconError, handleLinkIconLoad,
     addCustomSection, renameCustomSection, deleteCustomSection,
     renderDynamicSections, deleteSectionLink, loadFriendLinks,
     toggleEngineMenu, selectEngine,
@@ -55,6 +56,7 @@ Object.assign(window, {
     closeModalOnBlank, toggleModal, saveActiveLink,
     handleDragStart, handleDragEnd, handleDragOver, handleDrop,
     deleteSectionLink, renameCustomSection, deleteCustomSection, deleteFriendLink,
+    handleLinkIconError, handleLinkIconLoad,
     scrollToTop
 });
 
