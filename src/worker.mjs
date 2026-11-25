@@ -1,5 +1,5 @@
 import { handleConfig } from './routes/config.mjs';
-import { handleLogin, handleLogout, handlePassword } from './routes/auth.mjs';
+import { handleLogin, handleLogout, handlePassword, handleSession } from './routes/auth.mjs';
 import { json, isSameOrigin } from './lib/http.mjs';
 
 const STATE_CHANGING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -25,6 +25,8 @@ export default {
         return handleLogout(request, env);
       case '/api/password':
         return handlePassword(request, env);
+      case '/api/session':
+        return handleSession(request, env);
       case '/api/links':
         return json({ success: false, message: '该接口已废弃' }, 410);
       default:

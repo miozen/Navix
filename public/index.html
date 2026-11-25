@@ -7,6 +7,7 @@
     <meta name="keywords" content="网址导航, Mio导航, 开发者导航, 智能导航, 响应式网站, 云端同步">
 
     <title id="page-title">Mio-智能多功能响应式导航</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
 
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
@@ -26,7 +27,7 @@
         <button aria-label="打开设置面板" onclick="toggleThemeMenu(event)" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:scale-105 active:scale-95 transition-all shadow-lg cursor-pointer" title="打开设置面板（外观 / 站点 / 后台）">
             <i id="theme-icon" class="fas fa-palette text-sm"></i>
         </button>
-        <div id="theme-panel" class="absolute left-0 top-full mt-2 w-64 max-h-[75vh] overflow-y-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl hidden backdrop-blur-md p-4 space-y-3 z-[160]" onclick="event.stopPropagation()">
+        <div id="theme-panel" class="absolute left-0 top-full mt-2 w-[21.25rem] max-w-[calc(100vw-2.5rem)] max-h-[75vh] overflow-y-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl hidden backdrop-blur-md p-4 space-y-3 z-[160]" onclick="event.stopPropagation()">
             <div class="text-[10px] font-bold text-indigo-400 px-1 tracking-wider" data-i18n="sectionAppearance">外观 / APPEARANCE</div>
             <div class="text-[11px] font-bold text-slate-400 px-1" data-i18n="langTitle">语言 / Language</div>
             <div class="flex gap-2">
@@ -173,6 +174,24 @@
             <div class="flex justify-end space-x-3">
                 <button type="button" onclick="toggleModal(false)" class="px-4 py-2 bg-slate-800 text-slate-400 text-xs font-medium rounded-xl hover:bg-slate-700 transition-colors cursor-pointer" data-i18n="btnCancel">取消</button>
                 <button type="submit" id="modal-save-btn" class="px-4 py-2 bg-indigo-600 text-white text-xs font-medium rounded-xl hover:bg-indigo-500 transition-colors cursor-pointer shadow-lg shadow-indigo-600/20" data-i18n="btnSave">保存站点</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 管理员密码安全弹窗（登录 / 改密旧密码确认复用） -->
+    <div id="auth-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-[310]" onclick="closeAuthModalOnBlank(event)">
+        <form class="bg-slate-900 border border-slate-700/80 p-6 rounded-2xl w-full max-w-sm shadow-2xl text-slate-100" onclick="event.stopPropagation()" onsubmit="event.preventDefault(); submitAuthModal();">
+            <h4 class="text-md font-semibold text-slate-200 mb-4 flex items-center">
+                <i class="fas fa-lock mr-2 text-indigo-400"></i>
+                <span id="auth-modal-title">管理员验证</span>
+            </h4>
+            <div class="mb-6">
+                <label id="auth-modal-label" for="auth-modal-password" class="text-xs text-slate-400 block mb-1.5 font-medium">请输入后台管理员密码</label>
+                <input type="password" id="auth-modal-password" autocomplete="current-password" placeholder="请输入密码" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="cancelAuthModal()" class="px-4 py-2 bg-slate-800 text-slate-400 text-xs font-medium rounded-xl hover:bg-slate-700 transition-colors cursor-pointer" data-i18n="btnCancel">取消</button>
+                <button type="submit" id="auth-modal-submit" class="px-4 py-2 bg-indigo-600 text-white text-xs font-medium rounded-xl hover:bg-indigo-500 transition-colors cursor-pointer shadow-lg shadow-indigo-600/20">确认</button>
             </div>
         </form>
     </div>

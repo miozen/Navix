@@ -40,21 +40,18 @@
 - 线上问题修复第一批（已通过 PR #2 合并上线）：① 保存配置报「engines 格式无效」——前端未初始化时提交 `engines:null`，已做服务端容错（忽略 null 不覆盖）+ 前端 applySiteAppearance 写回有效数组 + 提交 body 过滤 null/undefined；② 根治「偶发保存/添加云端无响应、刷新才恢复」——`saveInProgress` 布尔锁改为串行 Promise 队列，并发保存依次执行且 body 构造移入 try、finally 必释放；③ 新增回到顶部按钮（初版滚动 >300px 显示）；④ 页脚改为单击统一入口（未登录登录 / 已登录确认后退出）。
 - **PR #2 已合并**：`8f634f7 Merge pull request #2 from miozen/dev`，第一批修复上线。
 - **PR #3 已合并**：`365d0a1 Merge pull request #3 from miozen/dev`，第二批 UI/交互修复上线（设置面板左上角、链接标题一行、编辑模态框 id、登录退出提示合并）。
-- 本轮审查缺陷修复与稳定性加固（已完成本地实施与测试）：
-  1. 回到顶部按钮根治：移除 HTML 行内 `style="visibility: hidden;"` 与 `opacity-0` 冲突样式；CSS 明确默认态与 `.is-visible` 渐变态；改用 160px 阈值 + `requestAnimationFrame` 节流监听，各屏幕与短页面均可稳定触发。
-  2. XSS 漏洞修复：新增 `escapeHtml` 函数，对动态插入 DOM 的书签标题/URL、分区名称、友链名称/URL、搜索引擎名称/URL/草稿进行完整转义；图标加 `loading="lazy"`。
-  3. 防误删二次确认：`deleteSectionLink` 与 `deleteFriendLink` 接入 `confirm(t('delConfirm'))`。
-  4. 409 冲突死锁修复：发生 409 时自动用服务端最新 `currentVersion` 与 `config` 更新本地状态，避免无法重试。
-  5. 乐观写入失败回滚：书签与分区增删改在云端保存失败时自动回滚本地状态与视图。
-  6. 分区清空不再复活：增加初始化标识 `nav_sections_init`，允许站长清空全部预设分区。
-  7. 弹窗表单支持键盘 Enter 提交（`<form>` 语义包裹）。
-  8. 天气与定位增加 24 小时本地缓存与 429 平滑兜底，避免 `ipapi.co` 频繁限流。
-  9. 自定义壁纸激活时暂停 Canvas 星空渲染循环以节约系统算力。
-  10. 修复改密成功文案（改为单击页脚）并更新回归清单。测试 41/41 与冒烟 5/5 全部通过。
+- **PR #4 已合并**：`7efe37d Merge pull request #4 from miozen/dev`，10 项审查缺陷修复与稳定性加固上线。
+- 本轮 6 项技术债务清理与交互加固（已在 `dev` 完成实施与本地验证）：
+  1. 旧代码文件清理：`git rm index.html` 移除仓库根目录废弃旧版页面，消除旧明文凭据与误用隐患。
+  2. 补齐网站图标：新增 `public/favicon.ico` 并在 `public/index.html` 声明，消除浏览器 404 回退请求。
+  3. 加宽设置面板：桌面端左上角 `#theme-panel` 由 `w-64`（256px）加宽至 `w-[21.25rem]`（340px）并保留移动端自适应。
+  4. 密码安全模态框：新增 `#auth-modal`（`type="password"` 遮罩输入、Enter 提交、Esc/空白取消），`updateAdminPwd` 与 `triggerAdminLogin` 均复用该模态框，彻底替换原生明文 `prompt()`。
+  5. 首屏会话主动探活：后端新增只读 `GET /api/session`，前端仅在本地有登录标记时静默探活，会话失效时自动回归只读态，避免“伪登录”。
+  6. 前端模块真实下沉：将 `public/assets/js/app.js` 1244 行实现下沉至 `core/utils.js`、`core/state.js`、`core/i18n.js`、`core/api.js` 与 `features/*`，`main.js` 通过生命周期回调解耦循环依赖，`app.js` 仅作兼容重导出。测试增至 43/43 通过。
 
 ## In Progress
 
-本轮审查缺陷与稳定性加固改动已在 `dev` 完成实现与本地测试（41/41 + 冒烟 5/5 通过），待提交到 `dev` 并创建新的 `dev → main` PR 合并上线。合并方式必须走 GitHub PR，不直接推送 `main`（用户明确要求）。
+本轮 6 项债务任务已在 `dev` 完成实现与本地验证（43/43 全部通过），推送到 `origin/dev` 后待创建 `dev → main` PR 合并上线并做线上验证。合并方式必须走 GitHub PR，不直接推送 `main`（D-014）。
 
 ## Remaining
 
@@ -115,35 +112,27 @@
 - D-016 验证：`node --check` 覆盖 `app.js`、`main.js`、`navigation.js`、`config.mjs`、`validation.mjs` 全部通过；`node --test` 40/40 通过（新增 4 项：站点标题/页脚/引擎合法配置、引擎缺 `{q}` 或非 http 被拒、重复/非法 id 与引擎数量边界、`normalizeUrl` 保留 `{q}`）；冒烟测试确认新增内联处理器已挂载到 window；初始化链路 `initCloudData → applySiteAppearance → renderEngineMenu` 已核对；站点设置改为一次原子写（patch 合并提交，避免三次请求与 version 三次递增）。
 - 第一批修复验证：`node --check` 覆盖 app.js/main.js/widgets.js/admin.js 通过；`node --test` 41/41（新增 engines:null 容错用例）、冒烟 5/5 通过；`git diff --check` 通过。
 - 第二批 UI/交互验证：`node --check` 覆盖 app.js/main.js/widgets.js 通过；`node --test` 41/41、冒烟 5/5 通过；`git diff --check` 通过；编辑按钮 bug 根因（data-i18n 选择器被改）已定位并修复。
-- 未执行：真实 Cloudflare preview 部署与 KV 端到端验证；浏览器交互回归需在有环境的机器上执行；GitHub Actions 云端首次运行需 push 后验证。
+- 6 项债务任务验证（2026-11-25，WSL Node v22.23.4）：`node --check` 覆盖全部 `.mjs` 与 `public/assets/js/**/*.js` 通过；`node --test tests/*.test.mjs` 43/43 通过（含新增 `GET /api/session` 集成用例与 6 项冒烟用例）；明文凭据扫描清零；`git diff --check` 通过。
+- 未执行：合并到 `main` 后的线上浏览器端到端显示验证（需 PR 合并后执行）。
 
 ## Blockers
 
-- 无技术阻塞；P0 ～ P3、接力稳定、D-015 默认密码方案均已完成。
-- Cloudflare Git 集成已配置、生产部署成功；首次登录行为已通过线上验证（默认密码登录 + 自动引导改密，符合预期，2026-11-24 09:40）。
-- 待补验证：首次改密后新密码写入 KV 与默认密码失效的线上确认；`tests/regression.md` 浏览器交互回归；GitHub Actions 云端首次运行。
-- 安全生产基线 `main` = `365d0a1`（PR #3 合并，含第二批 UI 修复，不含旧版公开密码漏洞）；后续只允许来自 `dev` 的已验证合并（D-013、D-014）。
+- 无技术阻塞；P0 ～ P3、接力稳定、D-015/D-016 及 6 项债务清理均已完成。
+- Cloudflare Git 集成已配置、生产部署成功；首次登录及 PR #1～#4 线上验证均已通过。
+- 待补验证：本轮 6 项改动合并 `main` 后的线上显示验证与 `tests/regression.md` 增量回归。
+- 安全生产基线 `main` = `7efe37d`（PR #4 合并）；后续只允许来自 `dev` 的已验证合并（D-013、D-014）。
 - `.workbuddy-ai/` 已在 `.gitignore` 中排除，不应提交或删除。
-- 仓库根目录遗留旧版 `index.html` 含明文密码与旧 Token 逻辑（不在 `public/`、不被 Workers 发布）；是否删除待用户决定，已在 README 与 HANDOFF 标注为不得部署。
 
 ## Next Action
 
-1. **合并上线 PR #4（已推送至 `origin/dev`）**：
-   - 用户在 GitHub 创建并合并新的 `dev → main` PR：
-     - PR 创建链接：https://github.com/miozen/Navix/compare/main...dev?expand=1
-     - 建议标题：`fix: back-to-top button, XSS protection, delete confirm, 409 recovery and stability enhancements`
-   - PR #4 包含 10 项缺陷修复与稳定性加固：回到顶部按钮、XSS 实体转义、防误删二次确认、409 死锁解除、失败回滚、分区清空不复活、弹窗 Enter 提交、天气 24h 缓存与 429 降级、Canvas 星空休眠、改密单击文案。
-2. **合并后生产环境端到端验证**：
-   - 验证页面向下滚动超过 160px 时回到顶部按钮平滑浮现，点击平滑滚回顶部。
-   - 验证添加/编辑网址弹窗支持键盘 Enter 提交。
-   - 验证删除书签与友链时弹出确认对话框。
-   - 验证天气组件正常展示，刷新不频繁触发 429。
-3. **后续待处理债务任务（待用户确认后排期）**：
-   - **任务 1（旧代码文件清理）**：确认后安全删除仓库根目录废弃的旧版 `index.html`（`git rm index.html`），彻底消除旧明文凭据与误用隐患。
-   - **任务 2（补齐网站图标）**：补充 `public/favicon.ico`，消除浏览器访问图标时的 404 回退请求。
-   - **任务 3（搜索引擎设置面板体验）**：加宽桌面端左上角设置面板（从固定的 `w-64` / 256px 扩展到 ~340px），改善长 URL 模板输入体验。
-   - **任务 4（改密安全弹窗）**：把修改管理员密码时输入旧密码的原生无掩码 `prompt()` 改造成带遮罩的密码输入模态框。
-   - **任务 5（会话主动探活）**：首屏初始化时增加对服务端 Cookie 有效性的静默检测，会话过期时主动感知，避免“伪登录”状态下编辑后提交失败。
-   - **任务 6（模块代码真实下沉）**：将 `public/assets/js/app.js` 的实现代码真正下沉到 `core/` 和 `features/` 各独立模块中，消除表面模块化与巨石文件。
+1. **创建并合并 `dev → main` PR（PR #5）**：
+   - PR 创建链接：https://github.com/miozen/Navix/compare/main...dev?expand=1
+   - 建议标题：`refactor: clean up legacy index, add favicon, auth modal, session probe and modularize js`
+2. **合并后生产环境显示验证**：
+   - 确认 `/favicon.ico` 正常加载（无 404）。
+   - 确认桌面端设置面板加宽至 ~340px，搜索引擎长 URL 模板编辑清晰，移动端不溢出。
+   - 确认单击页脚登录与修改密码旧密码确认均弹出带遮罩的密码模态框，支持 Enter 提交与 Esc 取消。
+   - 确认刷新页面时 `GET /api/session` 正确校验 Cookie 会话（失效时自动退出管理态）。
+   - 确认前端各模块加载正常，所有页面交互（语言、主题、壁纸、分区、友链、拖拽、搜索）正常。
 
 常规开发阶段已全部完成；除非用户提出新需求（如本轮线上问题），否则不再进入新的 Phase。
