@@ -22,8 +22,8 @@
     <!-- 动态原生星空背景 (Canvas) -->
     <canvas id="starfield" class="fixed inset-0 w-full h-full pointer-events-none z-[-2] transition-opacity duration-700 opacity-100"></canvas>
 
-    <!-- 个性化设置浮窗：入口按钮与面板同处左上角，面板紧贴按钮下方展开 -->
-    <div class="fixed top-5 left-5 z-[150] relative">
+    <!-- 个性化设置浮窗：固定在视口左上角随屏幕滚动可见，面板紧贴按钮下方展开 -->
+    <div id="settings-floating" class="fixed top-5 left-5 z-[150]">
         <button aria-label="打开设置面板" onclick="toggleThemeMenu(event)" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:scale-105 active:scale-95 transition-all shadow-lg cursor-pointer" title="打开设置面板（外观 / 站点 / 后台）">
             <i id="theme-icon" class="fas fa-palette text-sm"></i>
         </button>

@@ -98,6 +98,26 @@ export function deleteCustomSection(id) {
     saveDynamicSections(secs);
 }
 
+/**
+ * 构建站点图标 HTML；真实图标加载失败（404 / 网络异常）时自动回退为首字符圆标。
+ */
+function buildLinkIconHtml(name, url, imgSizeClass = 'w-5 h-5', letterClass = 'w-5 h-5 text-[10px]') {
+    const firstChar = escapeHtml((String(name || '').charAt(0) || '?').toUpperCase());
+    const letterBadge = (hidden) =>
+        `<div${hidden ? ' style="display:none;"' : ''} class="link-letter ${letterClass} rounded-full bg-indigo-500/20 text-indigo-400 ${hidden ? '' : 'flex '}items-center justify-center font-bold shrink-0">${firstChar}</div>`;
+
+    try {
+        if (url) {
+            const hostname = new URL(url).hostname;
+            return `
+                <img src="https://unavatar.io/duckduckgo/${encodeURIComponent(hostname)}?fallback=false" loading="lazy" draggable="false" class="${imgSizeClass} rounded object-contain shrink-0" alt="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                ${letterBadge(true)}
+            `;
+        }
+    } catch {}
+    return letterBadge(false);
+}
+
 export function renderDynamicSections() {
     document.querySelectorAll('.dynamic-section-card').forEach((el) => el.remove());
     const grid = document.getElementById('main-nav-grid');
@@ -134,19 +154,7 @@ export function renderDynamicSections() {
                 const displayName = link.name;
                 const safeName = escapeHtml(displayName);
                 const safeUrl = escapeHtml(link.url);
-                const firstChar = escapeHtml((displayName.charAt(0) || '?').toUpperCase());
-                const letterHtml = `<div class="link-letter ${iconSizeClass} rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold shrink-0">${firstChar}</div>`;
-                let iconHtml = letterHtml;
-
-                try {
-                    if (link.url) {
-                        const hostname = new URL(link.url).hostname;
-                        iconHtml = `
-                            <img src="https://unavatar.io/duckduckgo/${encodeURIComponent(hostname)}" loading="lazy" draggable="false" class="${imgSizeClass} rounded object-contain shrink-0" alt="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                            <div style="display:none;" class="link-letter ${iconSizeClass} rounded-full bg-indigo-500/20 text-indigo-400 items-center justify-center font-bold shrink-0">${firstChar}</div>
-                        `;
-                    }
-                } catch {}
+                const iconHtml = buildLinkIconHtml(displayName, link.url, imgSizeClass, iconSizeClass);
 
                 linksHtml += `
                 <div class="link-card group relative flex items-center justify-between ${pClass} bg-slate-500/5 border border-slate-500/10 rounded-xl hover:bg-indigo-600/10 transition-all"
@@ -469,25 +477,27 @@ export function loadFriendLinks() {
     const container = document.getElementById('friend-links-container');
     if (!container) return;
     const links = state.cloudConfig.friendLinks || [];
-    container.innerHTML = '';
 
     if (links.length === 0) {
         container.innerHTML = `<div class="empty-hint col-span-full text-center text-xs text-slate-400/60 py-4">${t('noCloudLinks')}</div>`;
         return;
     }
 
-    links.forEach((item, index) => {
+    container.innerHTML = links.map((item, index) => {
         const safeName = escapeHtml(item.name);
         const safeUrl = escapeHtml(item.url);
-        container.innerHTML += `
-            <div class="link-card group relative flex items-center justify-between p-2.5 bg-slate-500/5 border border-slate-500/10 rounded-xl hover:bg-emerald-600/10 transition-all text-center">
-                <a href="${safeUrl}" draggable="false" target="_blank" rel="noopener noreferrer" title="${safeName}" class="link-title friend-link-label w-full text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors truncate px-2">${safeName}</a>
+        const iconHtml = buildLinkIconHtml(item.name, item.url, 'w-4 h-4', 'w-4 h-4 text-[9px]');
+        return `
+            <div class="link-card group relative flex items-center justify-between p-2.5 bg-slate-500/5 border border-slate-500/10 rounded-xl hover:bg-emerald-600/10 transition-all">
+                <a href="${safeUrl}" draggable="false" target="_blank" rel="noopener noreferrer" title="${safeName}" class="link-title friend-link-label flex items-center space-x-2 w-full min-w-0 px-1 text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors">
+                    ${iconHtml} <span class="truncate">${safeName}</span>
+                </a>
                 <div class="admin-only link-actions absolute right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button type="button" onclick="openEditLinkModal('friend', null, ${index})" class="text-[10px] text-slate-400 hover:text-sky-400 bg-slate-500/10 px-1 rounded cursor-pointer" title="编辑"><i class="fas fa-pen"></i></button>
                     <button type="button" onclick="deleteFriendLink(event, ${index})" class="text-[10px] text-slate-500 hover:text-red-400 bg-slate-500/10 px-1 rounded cursor-pointer" title="删除"><i class="fas fa-times"></i></button>
                 </div>
             </div>`;
-    });
+    }).join('');
 }
 
 export async function deleteFriendLink(e, index) {

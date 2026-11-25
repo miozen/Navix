@@ -47,7 +47,8 @@
   3. 加宽设置面板：桌面端左上角 `#theme-panel` 由 `w-64`（256px）加宽至 `w-[21.25rem]`（340px）并保留移动端自适应。
   4. 密码安全模态框：新增 `#auth-modal`（`type="password"` 遮罩输入、Enter 提交、Esc/空白取消），`updateAdminPwd` 与 `triggerAdminLogin` 均复用该模态框，彻底替换原生明文 `prompt()`。
   5. 首屏会话主动探活：后端新增只读 `GET /api/session`，前端仅在本地有登录标记时静默探活，会话失效时自动回归只读态，避免“伪登录”。
-  6. 前端模块真实下沉：将 `public/assets/js/app.js` 1244 行实现下沉至 `core/utils.js`、`core/state.js`、`core/i18n.js`、`core/api.js` 与 `features/*`，`main.js` 通过生命周期回调解耦循环依赖，`app.js` 仅作兼容重导出。测试增至 43/43 通过。
+  6. 前端模块真实下沉：将 `public/assets/js/app.js` 1244 行实现下沉至 `core/utils.js`、`core/state.js`、`core/i18n.js`、`core/api.js` 与 `features/*`，`main.js` 通过生命周期回调解耦循环依赖，`app.js` 仅作兼容重导出。
+  7. 友链图标与设置面板视口悬浮：抽出 `buildLinkIconHtml` 公共函数为友情链接补充站点图标，并为 `unavatar.io/duckduckgo` 加上 `?fallback=false` 以严格回退至首字符圆标；移除 `public/index.html` 中 `#settings-floating` 冲突的 `relative` 类，使设置按钮真正跟随视口左上角悬浮。测试 43/43 全部通过。
 
 ## In Progress
 
@@ -129,8 +130,8 @@
    - PR 创建链接：https://github.com/miozen/Navix/compare/main...dev?expand=1
    - 建议标题：`refactor: clean up legacy index, add favicon, auth modal, session probe and modularize js`
 2. **合并后生产环境显示验证**：
-   - 确认 `/favicon.ico` 正常加载（无 404）。
-   - 确认桌面端设置面板加宽至 ~340px，搜索引擎长 URL 模板编辑清晰，移动端不溢出。
+   - 确认`/favicon.ico` 正常加载（无 404），友链与分区链接均正常展示图标并在无真实图标时回退首字符圆标。
+   - 确认桌面端设置面板加宽至 ~340px，且页面滚动时左上角设置按钮始终悬浮在视口内、可正常展开面板。
    - 确认单击页脚登录与修改密码旧密码确认均弹出带遮罩的密码模态框，支持 Enter 提交与 Esc 取消。
    - 确认刷新页面时 `GET /api/session` 正确校验 Cookie 会话（失效时自动退出管理态）。
    - 确认前端各模块加载正常，所有页面交互（语言、主题、壁纸、分区、友链、拖拽、搜索）正常。
