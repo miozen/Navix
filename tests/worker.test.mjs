@@ -316,3 +316,45 @@ test('改密后默认密码失效', async () => {
   }), env);
   assert.equal(stale.status, 401);
 });
+
+test('GET /api/session 会话探活准确反映登录态、默认密码态与失效态', async () => {
+  const { env } = setupEnv();
+
+  // 未登录
+  const anon = await worker.fetch(request('/api/session'), env);
+  assert.equal(anon.status, 200);
+  assert.deepEqual(await anon.json(), { authenticated: false });
+
+  // 默认密码登录
+  const defLogin = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'navix666' })
+  }), env);
+  const defCookie = defLogin.headers.get('Set-Cookie').split(';')[0];
+  const defSess = await worker.fetch(request('/api/session', { headers: { Cookie: defCookie } }), env);
+  assert.equal(defSess.status, 200);
+  assert.deepEqual(await defSess.json(), { authenticated: true, mustChangePassword: true });
+
+  // 改密后旧会话失效，新密码登录后 mustChangePassword 为 false
+  await worker.fetch(request('/api/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: defCookie },
+    body: JSON.stringify({ oldPassword: 'navix666', newPassword: 'new-strong-password' })
+  }), env);
+  const staleSess = await worker.fetch(request('/api/session', { headers: { Cookie: defCookie } }), env);
+  assert.deepEqual(await staleSess.json(), { authenticated: false });
+
+  const newLogin = await worker.fetch(request('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'new-strong-password' })
+  }), env);
+  const newCookie = newLogin.headers.get('Set-Cookie').split(';')[0];
+  const validSess = await worker.fetch(request('/api/session', { headers: { Cookie: newCookie } }), env);
+  assert.deepEqual(await validSess.json(), { authenticated: true, mustChangePassword: false });
+
+  // 错误方法被拒绝
+  const postSess = await worker.fetch(request('/api/session', { method: 'POST' }), env);
+  assert.equal(postSess.status, 405);
+});

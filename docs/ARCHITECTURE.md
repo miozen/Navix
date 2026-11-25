@@ -18,22 +18,22 @@
 | 静态页面 | `public/index.html`、`public/assets/**` | UI、i18n、主题、壁纸、分区/友链、天气、后台交互 | 原生 ES Modules、CDN |
 | Worker 入口 | `src/worker.mjs` | `/api/*` 路由分发、CSRF 同源校验、方法限制 | 路由模块 |
 | 配置路由 | `src/routes/config.mjs` | GET 公开配置；POST 白名单写入与版本冲突提示 | `NAV_DB`、校验模块 |
-| 鉴权路由 | `src/routes/auth.mjs` | 登录、退出、改密、会话版本失效 | Web Crypto、`NAV_DB` |
+| 鉴权路由 | `src/routes/auth.mjs` | 登录、退出、改密、会话探活、会话版本失效 | Web Crypto、`NAV_DB` |
 | 辅助库 | `src/lib/` | 密码哈希、会话签名、配置读写、字段校验、HTTP 工具 | Web Crypto |
 | 配置清单 | `wrangler.jsonc` | Worker 入口、`public/` 静态目录、KV 绑定、preview/production 环境 | Wrangler |
 | 测试 | `tests/` | 安全测试、Worker API 测试、回归清单 | Node 内置 test runner |
 
-前端模块入口：`core/state.js`、`core/api.js`、`core/i18n.js`，以及 `features/starfield.js`、`appearance.js`、`widgets.js`、`navigation.js`、`admin.js`；`main.js` 负责启动与内联事件兼容。逻辑暂集中于 `app.js`，后续可按入口逐步下沉。
+前端模块入口：`core/utils.js`、`core/state.js`、`core/api.js`、`core/i18n.js`，以及 `features/starfield.js`、`appearance.js`、`widgets.js`、`navigation.js`、`admin.js`；`main.js` 负责启动、跨模块回调注册与内联事件兼容，`app.js` 仅作向后兼容聚合重导出。
 
 ## 3. 核心业务流程
 
 ### 3.1 页面初始化
 
-`main.js` 挂载内联处理器 → `checkAdminSession()` → `applyLanguage()` → 时钟/天气 → `initCloudData()` → 渲染分区与友链。`initCloudData()` 先读浏览器本地缓存，再 GET `/api/config` 覆盖公开配置字段；网络失败时保留本地缓存继续渲染。
+`main.js` 挂载内联处理器 → `checkAdminSession()` → `verifyAdminSession()`（仅在本地已有登录标记时静默请求 `GET /api/session` 探活）→ `applyLanguage()` → 时钟/天气 → `initCloudData()` → 渲染分区与友链。`initCloudData()` 先读浏览器本地缓存，再 GET `/api/config` 覆盖公开配置字段；网络失败时保留本地缓存继续渲染。
 
 ### 3.2 登录与配置写入
 
-- 登录：双击页脚 → `POST /api/login` → 服务端校验 `admin_auth` 哈希 → 返回短期签名 HttpOnly Cookie。
+- 登录：单击页脚 → 弹出带遮罩的密码模态框 → `POST /api/login` → 服务端校验 `admin_auth` 哈希 → 返回短期签名 HttpOnly Cookie。
 - 写入：前端携带 Cookie 与 `version` POST `/api/config`；服务端校验同源、白名单与版本；成功后递增版本。
 - 版本不一致返回 409 与当前配置，仅作尽力而为提示，不保证原子性（D-011）。
 - 保存状态机：`idle / saving / saved / failed / unknown`；超时保留草稿并提示刷新确认。
@@ -44,7 +44,7 @@
 
 ### 3.4 公开边界
 
-只有 `public/` 被 Static Assets 发布；`src/`、`docs/`、`tests/`、`wrangler.jsonc` 不公开。`GET /api/config` 不返回任何凭据。`/api/links` 已关闭。
+只有 `public/` 被 Static Assets 发布（含 `index.html`、`favicon.ico`、`ads.txt`、`assets/`）；`src/`、`docs/`、`tests/`、`wrangler.jsonc` 不公开。`GET /api/config` 不返回任何凭据。`/api/links` 已关闭。
 
 ## 4. 持久化与数据流
 

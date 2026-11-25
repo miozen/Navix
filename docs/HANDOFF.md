@@ -2,48 +2,40 @@
 
 > 仅保存恢复开发所需的最小状态。架构见 [`ARCHITECTURE.md`](ARCHITECTURE.md)，决策见 [`DECISIONS.md`](DECISIONS.md)，阶段计划见 [`CURRENT_PLAN.md`](CURRENT_PLAN.md)。
 
-- **Last Updated**：2026-11-24 20:35 GMT+8
+- **Last Updated**：2026-11-25 08:40 GMT+8
 - **Current Branch**：`dev`
 - **Remote**：远端名以各机 `git remote -v` 为准；本机为 `origin`、部分机器为 `navix`，均指向 `https://github.com/miozen/Navix.git`
-- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；`dev` 本地 HEAD 为 `3c3e9ee`。`main` 远端为 `365d0a1`（Merge PR #3）
-- **Local vs Remote**：`origin/dev` = `3c3e9ee`；`origin/main` = `365d0a1`（PR #1、#2、#3 均已合并上线）。`dev` 已推送远端，待创建 PR #4 合并到 main
+- **HEAD / Last Commit**：以 `git rev-parse HEAD` 为准；`main` 远端为 `7efe37d`（Merge PR #4）
+- **Local vs Remote**：`origin/main` = `7efe37d`（PR #1 ～ #4 均已合并上线）。`dev` 已完成 6 项债务清理与重构并同步推送 `origin/dev`，待合并到 `main`
 - **Working Tree**：工作区干净
-- **Current Phase**：P0 ～ P3 全部完成；PR #1、#2、#3 均已合并上线；本轮缺陷修复与稳定性加固已推送到 dev
-- **Current Task**：用户在 GitHub 创建并合并新的 `dev → main` PR（PR #4）后自动部署上线
+- **Current Phase**：P0 ～ P3 全部完成；PR #1 ～ #4 均已合并上线；6 项债务清理已在 `dev` 完成并验证
+- **Current Task**：创建并合并 `dev → main` PR（PR #5）后进行线上显示验证
 - **Last Completed**：
-  - PR #1、#2、#3 均已成功合并上线。
-  - 本轮全面审查缺陷修复与稳定性加固已提交并推送至 `dev`（`3c3e9ee`）：
-    1. 回到顶部按钮彻底根治：清除 HTML 行内 `style="visibility: hidden;"` 与 `opacity-0` 冲突样式；CSS 规范 `.back-to-top` 默认隐藏及 `.is-visible` 渐变展示态；JS 改为 `window.scrollY > 160` + `requestAnimationFrame` 节流更新，各分辨率与不同内容高度均能平滑稳定出现/回顶。
-    2. XSS 漏洞修复：封装 `escapeHtml` 工具函数，对动态拼入 DOM 的书签标题/URL、分区名称、友链名称/URL、搜索引擎名称/URL/草稿进行完整转义；图标加 `loading="lazy"`。
-    3. 防误删二次确认：`deleteSectionLink` 与 `deleteFriendLink` 激活 `confirm(t('delConfirm'))`。
-    4. 409 版本冲突死锁解除：发生 409 时自动用服务端最新 `currentVersion` 与 `config` 更新本地状态，避免无法重试。
-    5. 乐观写入失败自动回滚：书签与分区增删改在云端保存失败时自动回滚本地内存与 localStorage。
-    6. 分区清空后不再复活：增加 `nav_sections_init` 标识，允许站长清空全部预设分区。
-    7. 弹窗表单支持键盘 Enter 提交（`<form>` 语义包裹）。
-    8. 天气与定位增加 24 小时本地缓存与 429 平滑兜底，避免 `ipapi.co` 频繁限流。
-    9. 自定义壁纸激活时暂停 Canvas 星空渲染循环以节约系统算力。
-    10. 修复改密成功文案（改为单击页脚）并更新回归清单。
+  - PR #1 ～ #4 均已合并上线（当前 `origin/main` = `7efe37d`）。
+  - 本轮 6 项债务任务已在 `dev` 完成实施并验证：
+    1. 删除仓库根目录废弃旧版 `index.html`（`git rm index.html`），同步更新 `README.md`。
+    2. 新增 `public/favicon.ico` 并在 `public/index.html` 引用，消除 404 回退。
+    3. 桌面端设置面板 `#theme-panel` 由 `w-64`（256px）加宽至 `w-[21.25rem]`（340px），移动端保持 `calc(100vw - 2.5rem)` 自适应。
+    4. 新增带遮罩的 `#auth-modal` 密码输入模态框，登录（`triggerAdminLogin`）与修改密码旧密码确认（`updateAdminPwd`）均复用该模态框，移除原生明文 `prompt()`。
+    5. 后端新增只读 `GET /api/session`，前端首屏在本地存在登录态时静默探活，会话失效时自动清理本地状态回归只读态。
+    6. 将 `public/assets/js/app.js` 真实下沉模块化至 `core/utils.js`、`core/state.js`、`core/i18n.js`、`core/api.js` 与 `features/*`，`main.js` 通过 `hooks` 解耦循环依赖，`app.js` 精简为兼容聚合入口。
 - **Validation Performed**：
-  - `node --test tests/*.test.mjs`：41/41 全部通过；冒烟 5/5 通过
-  - 全部前端 JS 与 `.mjs` 模块 `node --check` 语法检查通过
-  - `git diff --check` 通过，无空白或语法报警
+  - `node --test tests/*.test.mjs`：43/43 全部通过（含新增 `GET /api/session` 集成测试与 6 项冒烟测试）
+  - 全部 `src/`、`scripts/`、`tests/`（`.mjs`）与 `public/assets/js/`（`.js`）语法检查 `node --check` 通过（WSL Node v22.23.4）
+  - 明文凭据扫描清零；`git diff --check` 通过
 - **Validation Pending**：
-  - 合并上线后真实环境端到端验证：回到顶部按钮、Enter 提交、删除确认、XSS 过滤
-  - 首次改密后 KV 写入与默认密码失效的线上验证
-  - 浏览器交互回归清单 `tests/regression.md` 完整执行
+  - 合并 PR #5 到 `main` 后的线上显示与端到端验证（`favicon.ico`、设置面板宽度、登录/改密遮罩模态框、会话探活、全站模块交互）
 - **Known Issues / Blockers**：
   - `SESSION_SECRET` 需通过 Cloudflare 后台 Secret 配置；生产 KV ID 已写入 `wrangler.jsonc`（`e20a2207b12549a7abe68eb7ce272b24`）。
-  - 管理员密码：内置默认 `navix666`，首次登录必须改密，改密后写入 KV `admin_auth`；旧密码 `admin888` 不得复用（D-015）。无需再跑 `generate-admin-auth.mjs`，该脚本仅作应急备用。
+  - 管理员密码：内置默认 `navix666`，首次登录必须改密，改密后写入 KV `admin_auth`；旧密码 `admin888` 不得复用（D-015）。
   - 版本检测仅为尽力而为提示；会话失效受 KV 最终一致性影响。
-  - 回退目标必须是已修复漏洞的 `main` 提交（当前 `365d0a1`），不得回退到 Pages 旧版。
-  - 仓库根目录旧版 `index.html`（非 `public/index.html`）仍含明文 `admin888` 与旧 Token 逻辑，不在公开目录、不影响 Workers 发布，但不得用于部署；是否删除待用户决定（删除属破坏性操作，未擅自执行）。
-  - Git 集成已在 Cloudflare 后台配置完成，生产部署成功；后续 push 到 `main` 自动部署。
+  - 回退目标必须是已修复漏洞的 `main` 提交（当前 `7efe37d`），不得回退到 Pages 旧版。
+  - Git 集成已在 Cloudflare 后台配置完成，后续 push/合并到 `main` 自动部署。
 - **Exact Next Action**：
-  1. 提交本轮缺陷修复与稳定性加固改动到 `dev` 并推送；本地测试 41/41 + 冒烟 5/5 通过。
-  2. 用户在 GitHub 手动创建并合并新的 `dev → main` Pull Request（本环境无法自动创建：无 `gh`、凭据读取被安全策略拦截、浏览器自动化 daemon 无法启动、匿名 API 401）——**禁止直接推送 `main`**（用户明确要求）。
+  1. 在 GitHub 创建并合并 `dev → main` Pull Request（PR #5）：
      - PR 创建链接：https://github.com/miozen/Navix/compare/main...dev?expand=1
-     - 建议标题：`fix: back-to-top button, XSS protection, delete confirm, 409 recovery and stability enhancements`
-  3. 合并后 Cloudflare Git 集成自动部署；到线上验证回到顶部按钮及各项交互。
+     - 建议标题：`refactor: clean up legacy index, add favicon, auth modal, session probe and modularize js`
+  2. 合并后 Cloudflare Git 集成自动部署；在线按 `tests/regression.md` 执行显示与功能验证（含 `favicon.ico`、340px 设置面板、遮罩密码弹窗、会话探活、各功能模块）。
 - **Cross-machine Ready**：`YES`（以 `origin/dev` 或 `origin/main` 为接力点）
 
 ## 稳定恢复清单

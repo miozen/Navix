@@ -6,14 +6,14 @@
 
 一款静态优先、零构建的多功能网址导航：原生 HTML / CSS / ES Modules 单页前端，配合 Cloudflare Workers + Static Assets + KV 提供云端配置同步。保持免费计划、无框架、无构建链，可回退、可扩展。
 
-> 本仓库为目标架构（Workers）源码。旧版 Cloudflare Pages 部署的现网仍含已公开的管理员密码漏洞，不得回退或复用其密码。安全约束与决策见 [`docs/DECISIONS.md`](docs/DECISIONS.md)，架构现状见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
+> 本仓库为目标架构（Workers）源码。旧版 Cloudflare Pages 部署的现网曾含已公开的管理员密码漏洞，不得回退或复用其密码。安全约束与决策见 [`docs/DECISIONS.md`](docs/DECISIONS.md)，架构现状见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
 >
-> 注意：仓库根目录的 `index.html` 是迁移前的 Pages 旧版遗留文件，仍含明文默认密码与旧 Token 逻辑。它不在 `public/` 内、不会被 Workers 发布，但不得用于任何部署。唯一有效的页面入口是 `public/index.html`。
+> 唯一有效的页面入口是 `public/index.html`。
 
 ## 核心特性
 
 - 云端全站同步：壁纸、分区、友链等公开配置保存在 KV，多设备共享；接口不可用时自动降级为浏览器本地缓存。
-- 安全后台：双击页脚进入，签名 HttpOnly Cookie 会话 + `sessionVersion` 失效机制；公开响应不含任何凭据。
+- 安全后台：单击页脚进入，带遮罩密码弹窗 + 签名 HttpOnly Cookie 会话 + 首屏会话探活 + `sessionVersion` 失效机制；公开响应不含任何凭据。
 - 中英双语、主题切换、动态星空、时区天气、多搜索引擎、拖拽排序。
 - 零构建部署：仅 `/api/*` 进入 Worker，其余由 Static Assets 提供；`src/`、`docs/`、`tests/` 等不对外公开。
 
@@ -22,6 +22,7 @@
 ```
 public/                 静态站点（唯一公开目录）
   index.html            页面结构
+  favicon.ico           站点图标
   assets/css/app.css    样式
   assets/js/            原生 ES Modules（core/ + features/）
 src/
@@ -67,13 +68,13 @@ KV namespace ID 不是访问凭据（访问 KV 仍需 API token / Worker binding
 
 全新部署的 KV 里没有密码，站点内置一个**初始默认密码 `navix666`**。无需生成哈希或手动写 KV：
 
-1. 双击页面页脚，输入 `navix666` 登录。
-2. **首次登录会被要求立即改密**：登录后自动展开设置面板并聚焦密码框。在"新密码"框填入你自己的密码（至少 8 位），弹窗输入旧密码 `navix666`，保存。
+1. 单击页面页脚，在密码弹窗输入 `navix666` 登录。
+2. **首次登录会被要求立即改密**：登录后自动展开设置面板并聚焦密码框。在"新密码"框填入你自己的密码（至少 8 位），在安全密码弹窗输入旧密码 `navix666`，保存。
 3. 系统自动把新密码的哈希写入 KV 键 `admin_auth`，默认密码随即失效。之后请用新密码重新登录。
 
 在改密之前，配置保存会被拒绝（提示先改密），这是为了防止他人用公开初始密码改动你的站点（D-015）。
 
-- **以后改密码**：双击页脚登录 → 设置面板填新密码 → 弹窗输入当前密码 → 保存。全程不需要脚本或后台操作。
+- **以后改密码**：单击页脚登录 → 设置面板填新密码 → 安全密码弹窗输入当前密码 → 保存。全程不需要脚本或后台操作。
 - **忘记密码**：在 Cloudflare 后台删除 `Navix` KV 里的 `admin_auth` 键，默认密码 `navix666` 会重新生效，再按上面流程改密。
 - 存储始终只保存哈希、不保存明文；旧会话在改密后失效（D-012）。绝不复用曾泄露的旧密码 `admin888`。
 

@@ -90,6 +90,23 @@ export async function handleLogout(request, env) {
   );
 }
 
+/**
+ * 只读会话探活接口，供前端初始化时核对 HttpOnly Cookie 是否仍有效。
+ */
+export async function handleSession(request, env) {
+  if (request.method !== 'GET') return json({ success: false, message: 'Method not allowed' }, 405);
+  const authenticated = await isAuthenticated(request, env);
+  if (!authenticated) {
+    return json({ authenticated: false }, 200, { 'Cache-Control': 'no-store' });
+  }
+  const mustChangePassword = await isUsingDefaultAuth(env);
+  return json(
+    { authenticated: true, mustChangePassword },
+    200,
+    { 'Cache-Control': 'no-store' }
+  );
+}
+
 export async function handlePassword(request, env) {
   if (request.method !== 'POST') return json({ success: false, message: 'Method not allowed' }, 405);
   if (!(await isAuthenticated(request, env))) {

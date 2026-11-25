@@ -1,21 +1,53 @@
-import { currentLang } from './core/state.js';
+import { state, hooks } from './core/state.js';
 import { setLanguage, applyLanguage } from './core/i18n.js';
 import { initCloudData } from './core/api.js';
-import { checkAdminSession, triggerAdminLogin, handleAdminTrigger, logoutAdmin, updateAdminPwd } from './features/admin.js';
-import { toggleThemeMenu, setBaseTheme, applyCustomBg, clearCustomBg } from './features/appearance.js';
-import { updateClockAndGreeting, fetchWeather, initBackToTop, scrollToTop } from './features/widgets.js';
+import { initStarfield } from './features/starfield.js';
+import {
+    checkAdminSession, verifyAdminSession, triggerAdminLogin, handleAdminTrigger,
+    logoutAdmin, updateAdminPwd, closeAuthModalOnBlank, submitAuthModal, cancelAuthModal
+} from './features/admin.js';
+import { toggleThemeMenu, setBaseTheme, applyWallpaperStyles, applyCustomBg, clearCustomBg } from './features/appearance.js';
+import { updateClockAndGreeting, fetchWeather, renderWeather, initBackToTop, scrollToTop } from './features/widgets.js';
 import {
     handleDragStart, handleDragEnd, handleDragOver, handleDrop,
     addCustomSection, renameCustomSection, deleteCustomSection,
-    renderDynamicSections, deleteSectionLink,
+    renderDynamicSections, deleteSectionLink, loadFriendLinks,
     toggleEngineMenu, selectEngine,
     handleSearchSubmit, applySiteAppearance,
     setDefaultEngine, addEngine, removeEngine, resetEngines, applySiteSettings,
     openLinkModal, openEditLinkModal, toggleModal, closeModalOnBlank, saveActiveLink, deleteFriendLink
 } from './features/navigation.js';
 
+// 注册跨模块生命周期回调，保持依赖单向无环。
+hooks.onUnauthorized = () => logoutAdmin();
+hooks.onLanguageApplied = () => {
+    renderDynamicSections();
+    loadFriendLinks();
+};
+hooks.onLanguageChanged = () => {
+    updateClockAndGreeting();
+    renderWeather();
+    selectEngine(state.currentEngineKey);
+};
+hooks.onCloudConfigLoaded = (savedBg) => {
+    if (savedBg && !document.body.classList.contains('bg-cleared')) {
+        applyWallpaperStyles(savedBg);
+        const bgInput = document.getElementById('custom-bg-input');
+        if (bgInput) bgInput.value = savedBg;
+        document.getElementById('clear-bg-btn')?.classList.remove('hidden');
+    } else {
+        const starfield = document.getElementById('starfield');
+        if (starfield) starfield.style.opacity = '1';
+    }
+    renderDynamicSections();
+    loadFriendLinks();
+    applySiteAppearance();
+};
+
+// 挂载 HTML 内联事件所需的全局处理器
 Object.assign(window, {
-    setLanguage, checkAdminSession, triggerAdminLogin, handleAdminTrigger, logoutAdmin, updateAdminPwd,
+    setLanguage, checkAdminSession, verifyAdminSession, triggerAdminLogin, handleAdminTrigger,
+    logoutAdmin, updateAdminPwd, closeAuthModalOnBlank, submitAuthModal, cancelAuthModal,
     toggleThemeMenu, setBaseTheme, applyCustomBg, clearCustomBg,
     toggleEngineMenu, selectEngine, handleSearchSubmit, applySiteAppearance,
     setDefaultEngine, addEngine, removeEngine, resetEngines, applySiteSettings,
@@ -29,38 +61,42 @@ Object.assign(window, {
 // 搜索引擎提交由自定义 URL 模板接管（含 {q} 占位符），不走表单默认 action
 document.getElementById('search-form')?.addEventListener('submit', handleSearchSubmit);
 
-// 回到顶部按钮：顶部标题滚出视口时显示（IntersectionObserver，见 app.js）
+initStarfield();
 initBackToTop();
+setInterval(updateClockAndGreeting, 1000);
 
-// --- 10. 初始化与键盘快捷键 ---
-        document.addEventListener('click', () => {
-            document.getElementById('engine-menu').classList.add('hidden');
-            document.getElementById('theme-panel').classList.add('hidden');
-        });
+// 全局空白点击与快捷键
+document.addEventListener('click', () => {
+    document.getElementById('engine-menu')?.classList.add('hidden');
+    document.getElementById('theme-panel')?.classList.add('hidden');
+});
 
-        document.addEventListener('keydown', event => {
-            const activeTag = document.activeElement?.tagName?.toLowerCase();
-            const isTyping = ['input', 'textarea', 'select'].includes(activeTag);
+document.addEventListener('keydown', (event) => {
+    const activeTag = document.activeElement?.tagName?.toLowerCase();
+    const isTyping = ['input', 'textarea', 'select'].includes(activeTag);
 
-            if (event.key === 'Escape') {
-                document.getElementById('engine-menu')?.classList.add('hidden');
-                document.getElementById('theme-panel')?.classList.add('hidden');
-                toggleModal(false);
-            }
+    if (event.key === 'Escape') {
+        document.getElementById('engine-menu')?.classList.add('hidden');
+        document.getElementById('theme-panel')?.classList.add('hidden');
+        toggleModal(false);
+        cancelAuthModal();
+    }
 
-            if (event.key === '/' && !isTyping) {
-                const searchInput = document.getElementById('search-input');
-                if (searchInput) {
-                    event.preventDefault();
-                    searchInput.focus();
-                    searchInput.select();
-                }
-            }
-        });
+    if (event.key === '/' && !isTyping) {
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            event.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+        }
+    }
+});
 
-        checkAdminSession();
-        document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
-        applyLanguage();
-        updateClockAndGreeting();
-        fetchWeather();
-        initCloudData();
+// 首屏初始化
+checkAdminSession();
+verifyAdminSession();
+document.documentElement.lang = state.currentLang === 'zh' ? 'zh-CN' : 'en';
+applyLanguage();
+updateClockAndGreeting();
+fetchWeather();
+initCloudData();
